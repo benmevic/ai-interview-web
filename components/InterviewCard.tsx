@@ -23,10 +23,21 @@ export default function InterviewCard({ interview }: InterviewCardProps) {
     }
   }
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'Tamamlandı'
+      case 'in_progress':
+        return 'Devam Ediyor'
+      default:
+        return status
+    }
+  }
+
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
+    return new Date(date).toLocaleDateString('tr-TR', {
       year: 'numeric',
-      month: 'short',
+      month: 'long',
       day: 'numeric',
     })
   }
@@ -44,7 +55,7 @@ export default function InterviewCard({ interview }: InterviewCardProps) {
               interview.status
             )}`}
           >
-            {interview.status.replace('_', ' ')}
+            {getStatusText(interview.status)}
           </span>
         </div>
       </CardHeader>
@@ -59,27 +70,27 @@ export default function InterviewCard({ interview }: InterviewCardProps) {
           {interview.score !== undefined && (
             <div className="flex items-center text-sm text-gray-600">
               <TrendingUp className="mr-2 h-4 w-4" />
-              Score: <span className="ml-1 font-semibold">{interview.score}%</span>
+              Puan: <span className="ml-1 font-semibold">{interview.score}%</span>
             </div>
           )}
 
           <div className="flex items-center text-sm text-gray-600">
             <Briefcase className="mr-2 h-4 w-4" />
-            {interview.status === 'completed' ? 'Completed' : 'In Progress'}
+            {interview.status === 'completed' ? 'Tamamlandı' : 'Devam Ediyor'}
           </div>
 
           <div className="mt-4 flex space-x-2">
             {interview.status === 'in_progress' && (
               <Link href={`/interview/${interview.id}`} className="flex-1">
                 <Button className="w-full" size="sm">
-                  Continue
+                  Devam Et
                 </Button>
               </Link>
             )}
             {interview.status === 'completed' && (
               <Link href={`/interview/${interview.id}`} className="flex-1">
                 <Button variant="outline" className="w-full" size="sm">
-                  View Details
+                  Detayları Gör
                 </Button>
               </Link>
             )}

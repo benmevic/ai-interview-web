@@ -54,25 +54,25 @@ export default function LoginPage() {
         <Card>
           <CardHeader className="text-center">
             <LogIn className="mx-auto h-12 w-12 text-primary-600" />
-            <CardTitle className="mt-4 text-2xl">Welcome Back</CardTitle>
+            <CardTitle className="mt-4 text-2xl">Tekrar Hoş Geldiniz</CardTitle>
             <p className="mt-2 text-sm text-gray-600">
-              Sign in to continue your interview practice
+              Mülakat pratiğinize devam etmek için giriş yapın
             </p>
           </CardHeader>
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
-                label="Email"
+                label="E-posta"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="ornek@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
 
               <Input
-                label="Password"
+                label="Şifre"
                 type="password"
                 placeholder="••••••••"
                 value={password}
@@ -91,15 +91,15 @@ export default function LoginPage() {
                 className="w-full"
                 disabled={isLoading}
               >
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
               </Button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                Don&apos;t have an account?{' '}
+                Hesabınız yok mu?{' '}
                 <Link href="/register" className="font-medium text-primary-600 hover:text-primary-700">
-                  Sign up
+                  Kayıt Ol
                 </Link>
               </p>
             </div>

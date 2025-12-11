@@ -24,12 +24,12 @@ export default function RegisterPage() {
     setError('')
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError('Şifreler eşleşmiyor')
       return
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError('Şifre en az 6 karakter olmalıdır')
       return
     }
 
@@ -66,25 +66,25 @@ export default function RegisterPage() {
         <Card>
           <CardHeader className="text-center">
             <UserPlus className="mx-auto h-12 w-12 text-primary-600" />
-            <CardTitle className="mt-4 text-2xl">Create Account</CardTitle>
+            <CardTitle className="mt-4 text-2xl">Hesap Oluştur</CardTitle>
             <p className="mt-2 text-sm text-gray-600">
-              Start practicing your interview skills today
+              Mülakat becerilerinizi geliştirmeye bugün başlayın
             </p>
           </CardHeader>
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
-                label="Email"
+                label="E-posta"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="ornek@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
 
               <Input
-                label="Password"
+                label="Şifre"
                 type="password"
                 placeholder="••••••••"
                 value={password}
@@ -93,7 +93,7 @@ export default function RegisterPage() {
               />
 
               <Input
-                label="Confirm Password"
+                label="Şifreyi Onayla"
                 type="password"
                 placeholder="••••••••"
                 value={confirmPassword}
@@ -112,15 +112,15 @@ export default function RegisterPage() {
                 className="w-full"
                 disabled={isLoading}
               >
-                {isLoading ? 'Creating account...' : 'Create Account'}
+                {isLoading ? 'Hesap oluşturuluyor...' : 'Hesap Oluştur'}
               </Button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                Already have an account?{' '}
+                Zaten hesabınız var mı?{' '}
                 <Link href="/login" className="font-medium text-primary-600 hover:text-primary-700">
-                  Sign in
+                  Giriş Yap
                 </Link>
               </p>
             </div>

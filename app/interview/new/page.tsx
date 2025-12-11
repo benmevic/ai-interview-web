@@ -32,7 +32,7 @@ export default function NewInterviewPage() {
     setError('')
 
     if (!title.trim() || !position.trim()) {
-      setError('Please fill in all fields')
+      setError('Lütfen tüm alanları doldurun')
       return
     }
 
@@ -75,7 +75,7 @@ export default function NewInterviewPage() {
       <div className="gradient-bg flex min-h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-center">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary-600 border-t-transparent"></div>
-          <p className="mt-4 text-gray-600">Creating your interview...</p>
+          <p className="mt-4 text-gray-600">Mülakatınız oluşturuluyor...</p>
         </div>
       </div>
     )
@@ -86,32 +86,32 @@ export default function NewInterviewPage() {
       <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
         <div className="mb-8 text-center">
           <Briefcase className="mx-auto h-12 w-12 text-primary-600" />
-          <h1 className="mt-4 text-3xl font-bold text-gray-900">Start New Interview</h1>
+          <h1 className="mt-4 text-3xl font-bold text-gray-900">Yeni Mülakat Başlat</h1>
           <p className="mt-2 text-gray-600">
             {step === 'details'
-              ? 'Tell us about the position you\'re interviewing for'
-              : 'Upload your CV for personalized questions'}
+              ? 'Mülakat olmak istediğiniz pozisyon hakkında bize bilgi verin'
+              : 'Kişiselleştirilmiş sorular için CV\'nizi yükleyin'}
           </p>
         </div>
 
         {step === 'details' ? (
           <Card>
             <CardHeader>
-              <CardTitle>Interview Details</CardTitle>
+              <CardTitle>Mülakat Detayları</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleDetailsSubmit} className="space-y-4">
                 <Input
-                  label="Interview Title"
-                  placeholder="e.g., Google Software Engineer Interview"
+                  label="Mülakat Başlığı"
+                  placeholder="örn., Google Yazılım Mühendisi Mülakatı"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
                 />
 
                 <Input
-                  label="Position"
-                  placeholder="e.g., Senior Frontend Developer"
+                  label="Pozisyon"
+                  placeholder="örn., Kıdemli Frontend Geliştirici"
                   value={position}
                   onChange={(e) => setPosition(e.target.value)}
                   required
@@ -124,7 +124,7 @@ export default function NewInterviewPage() {
                 )}
 
                 <Button type="submit" className="w-full">
-                  Continue to CV Upload
+                  CV Yüklemeye Devam Et
                 </Button>
               </form>
             </CardContent>
@@ -134,9 +134,9 @@ export default function NewInterviewPage() {
             <Card className="mb-4">
               <CardContent className="p-6">
                 <div className="space-y-2">
-                  <p className="text-sm text-gray-600">Interview Title</p>
+                  <p className="text-sm text-gray-600">Mülakat Başlığı</p>
                   <p className="font-semibold text-gray-900">{title}</p>
-                  <p className="text-sm text-gray-600">Position</p>
+                  <p className="text-sm text-gray-600">Pozisyon</p>
                   <p className="font-semibold text-gray-900">{position}</p>
                 </div>
                 <Button
@@ -145,7 +145,7 @@ export default function NewInterviewPage() {
                   className="mt-4"
                   onClick={() => setStep('details')}
                 >
-                  Edit Details
+                  Detayları Düzenle
                 </Button>
               </CardContent>
             </Card>
