@@ -22,9 +22,9 @@ This is a modern AI Interview Simulator built with:
 
 ### React and Next.js
 - Use functional components with hooks
-- Follow Next.js 13+ App Router conventions when applicable
+- Follow modern Next.js App Router conventions (prefer App Router over Pages Router)
 - Use server components by default, client components only when needed
-- Place page components in `app/` or `pages/` directory
+- Place page components in `app/` directory for App Router
 - Use proper Next.js data fetching patterns (Server Components, `fetch`, etc.)
 - Implement proper error boundaries and loading states
 
@@ -39,7 +39,7 @@ This is a modern AI Interview Simulator built with:
 - Components go in `components/` directory
 - Utility functions in `lib/` or `utils/` directory
 - Type definitions in `types/` directory or co-located with components
-- API routes in `app/api/` or `pages/api/`
+- API routes in `app/api/` directory (following App Router conventions)
 - Group related files together (feature-based organization)
 
 ### Code Quality
