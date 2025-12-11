@@ -31,26 +31,26 @@ export default function InterviewPage() {
     }
 
     // Fetch interview data
-    fetchInterview()
-  }, [router, interviewId])
+    const loadInterview = async () => {
+      try {
+        const response = await fetch(`/api/interview/${interviewId}`)
+        const data = await response.json()
 
-  const fetchInterview = async () => {
-    try {
-      const response = await fetch(`/api/interview/${interviewId}`)
-      const data = await response.json()
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch interview')
+        }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch interview')
+        setInterview(data.data.interview)
+        setQuestions(data.data.questions)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      } finally {
+        setIsLoading(false)
       }
-
-      setInterview(data.data.interview)
-      setQuestions(data.data.questions)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setIsLoading(false)
     }
-  }
+
+    loadInterview()
+  }, [router, interviewId])
 
   const handleSubmitAnswer = async (answer: string) => {
     try {
