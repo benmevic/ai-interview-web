@@ -37,7 +37,7 @@ export default function QuestionCard({
         <div className="flex items-start justify-between">
           <CardTitle className="flex items-center">
             <MessageCircle className="mr-2 h-5 w-5 text-primary-600" />
-            Question {question.order}
+            Soru {question.order}
           </CardTitle>
           {isAnswered && (
             <CheckCircle className="h-5 w-5 text-green-600" />
@@ -54,7 +54,7 @@ export default function QuestionCard({
               <textarea
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
-                placeholder="Type your answer here..."
+                placeholder="Cevabınızı buraya yazın..."
                 rows={6}
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
@@ -63,19 +63,19 @@ export default function QuestionCard({
                 disabled={!answer.trim() || isSubmitting}
                 className="w-full"
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Answer'}
+                {isSubmitting ? 'Gönderiliyor...' : 'Cevabı Gönder'}
               </Button>
             </>
           ) : (
             <>
               <div className="rounded-lg bg-white p-4">
-                <p className="text-sm font-medium text-gray-700">Your Answer:</p>
+                <p className="text-sm font-medium text-gray-700">Cevabınız:</p>
                 <p className="mt-2 text-gray-800">{question.answer_text}</p>
               </div>
 
               {question.score !== undefined && (
                 <div className="rounded-lg bg-white p-4">
-                  <p className="text-sm font-medium text-gray-700">Score:</p>
+                  <p className="text-sm font-medium text-gray-700">Puan:</p>
                   <p className="mt-1 text-2xl font-bold text-primary-600">
                     {question.score}/10
                   </p>
@@ -84,7 +84,7 @@ export default function QuestionCard({
 
               {question.feedback && (
                 <div className="rounded-lg bg-white p-4">
-                  <p className="text-sm font-medium text-gray-700">Feedback:</p>
+                  <p className="text-sm font-medium text-gray-700">Geri Bildirim:</p>
                   <p className="mt-2 text-gray-800">{question.feedback}</p>
                 </div>
               )}

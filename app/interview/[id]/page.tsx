@@ -106,7 +106,7 @@ export default function InterviewPage() {
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-center">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary-600 border-t-transparent"></div>
-          <p className="mt-4 text-gray-600">Loading interview...</p>
+          <p className="mt-4 text-gray-600">Mülakat yükleniyor...</p>
         </div>
       </div>
     )
@@ -117,9 +117,9 @@ export default function InterviewPage() {
       <div className="gradient-bg flex min-h-[calc(100vh-4rem)] items-center justify-center">
         <Card>
           <CardContent className="p-12 text-center">
-            <p className="text-red-600">{error || 'Interview not found'}</p>
+            <p className="text-red-600">{error || 'Mülakat bulunamadı'}</p>
             <Button className="mt-4" onClick={() => router.push('/dashboard')}>
-              Back to Dashboard
+              Kontrol Paneline Dön
             </Button>
           </CardContent>
         </Card>
@@ -135,19 +135,19 @@ export default function InterviewPage() {
             <CardContent className="p-12">
               <Award className="mx-auto h-16 w-16 text-primary-600" />
               <h1 className="mt-4 text-3xl font-bold text-gray-900">
-                Interview Complete!
+                Mülakat Tamamlandı!
               </h1>
               <p className="mt-2 text-lg text-gray-600">
-                Great job completing {interview.title}
+                {interview.title} mülakatını tamamladığınız için tebrikler
               </p>
 
               <div className="mt-8 rounded-xl bg-gradient-to-r from-primary-50 to-secondary-50 p-8">
-                <p className="text-sm text-gray-600">Your Score</p>
+                <p className="text-sm text-gray-600">Puanınız</p>
                 <p className="mt-2 text-5xl font-bold text-primary-600">{totalScore}%</p>
               </div>
 
               <div className="mt-8 space-y-4">
-                <h2 className="text-xl font-semibold text-gray-900">Question Review</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Soru İncelemesi</h2>
                 {questions.map((question, index) => (
                   <QuestionCard key={question.id} question={question} isAnswered={true} />
                 ))}
@@ -155,10 +155,10 @@ export default function InterviewPage() {
 
               <div className="mt-8 flex justify-center space-x-4">
                 <Button onClick={() => router.push('/dashboard')}>
-                  Back to Dashboard
+                  Kontrol Paneline Dön
                 </Button>
                 <Button variant="outline" onClick={() => router.push('/interview/new')}>
-                  Start New Interview
+                  Yeni Mülakat Başlat
                 </Button>
               </div>
             </CardContent>
@@ -182,9 +182,9 @@ export default function InterviewPage() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Progress</p>
+                <p className="text-sm text-gray-600">İlerleme</p>
                 <p className="mt-1 text-lg font-semibold text-gray-900">
-                  Question {currentQuestionIndex + 1} of {questions.length}
+                  Soru {currentQuestionIndex + 1} / {questions.length}
                 </p>
               </div>
               <div className="flex items-center space-x-2">
@@ -222,7 +222,7 @@ export default function InterviewPage() {
               onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
               disabled={currentQuestionIndex === 0}
             >
-              Previous
+              Önceki
             </Button>
             <Button
               onClick={() =>
@@ -230,7 +230,7 @@ export default function InterviewPage() {
               }
               disabled={currentQuestionIndex === questions.length - 1}
             >
-              Next
+              Sonraki
             </Button>
           </div>
         )}

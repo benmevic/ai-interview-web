@@ -70,7 +70,7 @@ export default function DashboardPage() {
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-center">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary-600 border-t-transparent"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600">Yükleniyor...</p>
         </div>
       </div>
     )
@@ -82,9 +82,9 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
-            Welcome back{user?.email ? `, ${user.email.split('@')[0]}` : ''}!
+            Tekrar hoş geldiniz{user?.email ? `, ${user.email.split('@')[0]}` : ''}!
           </h1>
-          <p className="mt-2 text-gray-600">Track your interview progress and start new practice sessions</p>
+          <p className="mt-2 text-gray-600">Mülakat ilerlemenizi takip edin ve yeni pratik oturumları başlatın</p>
         </div>
 
         {/* Stats */}
@@ -92,7 +92,7 @@ export default function DashboardPage() {
           <div className="rounded-xl bg-white p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Interviews</p>
+                <p className="text-sm text-gray-600">Toplam Mülakatlar</p>
                 <p className="mt-1 text-3xl font-bold text-gray-900">{interviews.length}</p>
               </div>
               <div className="rounded-full bg-primary-100 p-3">
@@ -104,7 +104,7 @@ export default function DashboardPage() {
           <div className="rounded-xl bg-white p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Completed</p>
+                <p className="text-sm text-gray-600">Tamamlanan</p>
                 <p className="mt-1 text-3xl font-bold text-gray-900">{completedInterviews.length}</p>
               </div>
               <div className="rounded-full bg-green-100 p-3">
@@ -116,7 +116,7 @@ export default function DashboardPage() {
           <div className="rounded-xl bg-white p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Average Score</p>
+                <p className="text-sm text-gray-600">Ortalama Puan</p>
                 <p className="mt-1 text-3xl font-bold text-gray-900">{averageScore}%</p>
               </div>
               <div className="rounded-full bg-secondary-100 p-3">
@@ -131,21 +131,21 @@ export default function DashboardPage() {
           <Link href="/interview/new">
             <Button size="lg">
               <Plus className="mr-2 h-5 w-5" />
-              Start New Interview
+              Yeni Mülakat Başlat
             </Button>
           </Link>
         </div>
 
         {/* Interview History */}
         <div>
-          <h2 className="mb-6 text-2xl font-bold text-gray-900">Recent Interviews</h2>
+          <h2 className="mb-6 text-2xl font-bold text-gray-900">Son Mülakatlar</h2>
           {interviews.length === 0 ? (
             <div className="rounded-xl bg-white p-12 text-center shadow-lg">
-              <p className="text-gray-600">No interviews yet. Start your first practice session!</p>
+              <p className="text-gray-600">Henüz mülakat yok. İlk pratik oturumunuzu başlatın!</p>
               <Link href="/interview/new">
                 <Button className="mt-4">
                   <Plus className="mr-2 h-5 w-5" />
-                  Start Interview
+                  Mülakat Başlat
                 </Button>
               </Link>
             </div>

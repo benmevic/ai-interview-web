@@ -21,19 +21,19 @@ export default function CVUpload({ onFileUpload }: CVUploadProps) {
     setError('')
     
     if (acceptedFiles.length === 0) {
-      setError('Please upload a PDF file')
+      setError('Lütfen bir PDF dosyası yükleyin')
       return
     }
 
     const uploadedFile = acceptedFiles[0]
     
     if (uploadedFile.type !== 'application/pdf') {
-      setError('Only PDF files are accepted')
+      setError('Sadece PDF dosyaları kabul edilir')
       return
     }
 
     if (uploadedFile.size > 5 * 1024 * 1024) {
-      setError('File size must be less than 5MB')
+      setError('Dosya boyutu 5MB\'dan küçük olmalıdır')
       return
     }
 
@@ -73,10 +73,10 @@ export default function CVUpload({ onFileUpload }: CVUploadProps) {
           <input {...getInputProps()} />
           <Upload className="mx-auto h-12 w-12 text-gray-400" />
           <p className="mt-4 text-lg font-medium text-gray-700">
-            {isDragActive ? 'Drop your CV here' : 'Drag & drop your CV here'}
+            {isDragActive ? 'CV\'nizi buraya bırakın' : 'CV\'nizi buraya sürükleyin'}
           </p>
-          <p className="mt-2 text-sm text-gray-500">or click to browse</p>
-          <p className="mt-2 text-xs text-gray-400">PDF only, max 5MB</p>
+          <p className="mt-2 text-sm text-gray-500">veya göz atmak için tıklayın</p>
+          <p className="mt-2 text-xs text-gray-400">Sadece PDF, maksimum 5MB</p>
         </div>
       ) : (
         <Card>
@@ -96,7 +96,7 @@ export default function CVUpload({ onFileUpload }: CVUploadProps) {
               </Button>
             </div>
             <Button onClick={handleSubmit} className="mt-4 w-full">
-              Upload & Continue
+              Yükle ve Devam Et
             </Button>
           </CardContent>
         </Card>

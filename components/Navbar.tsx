@@ -32,7 +32,7 @@ export default function Navbar() {
           <Link href="/" className="flex items-center space-x-2">
             <Briefcase className="h-8 w-8 text-primary-600" />
             <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
-              AI Interview
+              AI Mülakat Simülatörü
             </span>
           </Link>
 
@@ -45,7 +45,7 @@ export default function Navbar() {
                     pathname === '/dashboard' ? 'text-primary-600' : 'text-gray-700'
                   }`}
                 >
-                  Dashboard
+                  Panel
                 </Link>
                 <Link
                   href="/interview/new"
@@ -53,22 +53,22 @@ export default function Navbar() {
                     pathname === '/interview/new' ? 'text-primary-600' : 'text-gray-700'
                   }`}
                 >
-                  New Interview
+                  Yeni Mülakat
                 </Link>
                 <Button variant="ghost" size="sm" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  Logout
+                  Çıkış
                 </Button>
               </>
             ) : (
               <>
                 <Link href="/login">
                   <Button variant="ghost" size="sm">
-                    Login
+                    Giriş
                   </Button>
                 </Link>
                 <Link href="/register">
-                  <Button size="sm">Get Started</Button>
+                  <Button size="sm">Başlayın</Button>
                 </Link>
               </>
             )}
