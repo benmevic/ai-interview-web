@@ -8,7 +8,7 @@ This is a modern AI Interview Simulator built with:
 - **Next.js 14** - React framework with App Router
 - **TypeScript 5.3** - For type safety and better developer experience
 - **Tailwind CSS 3.4** - Utility-first CSS framework
-- **OpenAI GPT-3.5** - AI integration for interview simulation
+- **OpenAI GPT-3.5-turbo** - AI integration for interview simulation
 - **Supabase** - Backend for authentication and database
 
 ## Build, Test, and Lint Commands
@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
     // Parse and validate request data
     const { field1, field2 } = await request.json()
     
+    // Validate required fields (checks for null, undefined, empty strings)
     if (!field1 || !field2) {
       return NextResponse.json(
         { success: false, error: 'Required fields missing' } as ApiResponse,
@@ -175,6 +176,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   }
 )
 
+// Set displayName for better debugging in React DevTools
 Button.displayName = 'Button'
 ```
 
