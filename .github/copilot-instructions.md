@@ -136,13 +136,18 @@ interface ApiResponse<T = any> {
 // Use cn() for conditional classes
 import { cn } from '@/lib/utils'
 
-<button className={cn(
-  'base-classes',
-  {
-    'conditional-class': condition,
-  },
-  className // Allow prop-based overrides
-)} />
+// Example: Using cn() in a component
+const MyComponent = ({ className, isActive }: { className?: string; isActive: boolean }) => {
+  return (
+    <button className={cn(
+      'base-classes',
+      {
+        'conditional-class': isActive,
+      },
+      className // Allow prop-based overrides
+    )} />
+  )
+}
 
 // Define component props extending HTML element props
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -152,10 +157,25 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 // Use React.forwardRef for components that need ref support
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', ...props }, ref) => {
-    // Component implementation
+  ({ className, variant = 'primary', size = 'md', ...props }, ref) => {
+    return (
+      <button
+        ref={ref}
+        className={cn(
+          'base-classes',
+          {
+            'variant-primary': variant === 'primary',
+            'size-md': size === 'md',
+          },
+          className
+        )}
+        {...props}
+      />
+    )
   }
 )
+
+Button.displayName = 'Button'
 ```
 
 ### File Organization
