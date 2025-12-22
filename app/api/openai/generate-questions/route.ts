@@ -1,38 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { openai } from '@/lib/openai'
+import { openai, getOpenAI } from '@/lib/openai'
 import { ApiResponse, Question } from '@/lib/types'
 
 /**
  * Generate interview questions with OpenAI API endpoint
  */
-
-
-export async function POST(request: NextRequest) {
+export async function POST(request:  NextRequest) {
   try {
-    // 🔍 EXTREME DEBUG
+    // 🔍 DEBUG: Key var mı kontrol et
     const apiKey = process.env.OPENAI_API_KEY
     console.log('🔑 OpenAI Key Check:', {
       exists: !!apiKey,
-      prefix: apiKey?. substring(0, 8),
-      length: apiKey?. length,
+      prefix: apiKey?.substring(0, 8),
+      length: apiKey?.length,
       startsWithSk: apiKey?.startsWith('sk-'),
     })
 
-    // OpenAI client oluşturmayı test et
+    // OpenAI client test
     try {
-      const testClient = new OpenAI({ apiKey: apiKey || '' })
+      const testClient = getOpenAI()
       console.log('✅ OpenAI client created successfully')
     } catch (clientErr) {
       console.error('❌ OpenAI client creation failed:', clientErr)
     }
 
     const { cvText, position } = await request.json()
-    
 
-    // -----------------------------
-    // MOCK QUESTIONS (Key yoksa)
-    // -----------------------------
-    if (!hasKey) {
+    if (!cvText || !position) {
+      return NextResponse.json(
+        { success: false, error: 'CV text and position are required' } as ApiResponse,
+        { status: 400 }
+      )
+    }
+
+    // ✅ MOCK SORULAR (OpenAI key yoksa veya hata olursa)
+    const useMock = ! process.env.OPENAI_API_KEY
+
+    if (useMock) {
       console.log('⚠️ Using mock questions (no OpenAI key)')
 
       const mockQuestions: Question[] = [
@@ -40,126 +44,146 @@ export async function POST(request: NextRequest) {
           id: 'q-1',
           interview_id: 'temp-id',
           question_text: `${position} pozisyonu için en önemli becerileriniz nelerdir?`,
-          order: 1,
+          order_num: 1,
           created_at: new Date().toISOString(),
         },
         {
           id: 'q-2',
           interview_id: 'temp-id',
-          question_text: 'Geçmiş projelerinizde karşılaştığınız en büyük zorluk neydi?',
-          order: 2,
+          question_text:  'Geçmiş projelerinizde karşılaştığınız en büyük zorluk neydi ve nasıl çözdünüz?',
+          order_num: 2,
           created_at: new Date().toISOString(),
         },
         {
           id: 'q-3',
           interview_id: 'temp-id',
-          question_text: 'Neden bu pozisyona başvurdunuz?',
-          order: 3,
+          question_text: 'Neden bu pozisyona başvurdunuz ve şirketimize neler katabilirsiniz?',
+          order_num: 3,
           created_at: new Date().toISOString(),
         },
         {
           id: 'q-4',
           interview_id: 'temp-id',
-          question_text: 'Ekip çalışması konusunda bir deneyiminizi anlatır mısınız?',
-          order: 4,
+          question_text: 'Ekip çalışması konusunda bir deneyiminizi detaylı anlatır mısınız?',
+          order_num:  4,
           created_at: new Date().toISOString(),
         },
         {
           id: 'q-5',
           interview_id: 'temp-id',
-          question_text: '5 yıl sonra kendinizi nerede görüyorsunuz?',
-          order: 5,
-          created_at: new Date().toISOString(),
+          question_text: 'Kendinizi 5 yıl sonra nerede görüyorsunuz? ',
+          order_num: 5,
+          created_at:  new Date().toISOString(),
         },
       ]
 
-      return NextResponse.json(
-        {
-          success: true,
-          data: { questions: mockQuestions },
-        } as ApiResponse,
-        { status: 200 }
-      )
+      return NextResponse.json({
+        success: true,
+        data:  { questions: mockQuestions },
+      } as ApiResponse)
     }
 
-    // -----------------------------
-    // OPENAI CALL
-    // -----------------------------
+    // ✅ GERÇEK OpenAI çağrısı
+    console. log('📡 Calling OpenAI API.. .')
+
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-3.5-turbo',
       messages: [
         {
           role: 'system',
-          content:
-            "You are an expert interviewer. Generate concise, professional interview questions.",
+          content: 
+            'You are an expert interviewer.  Generate relevant, insightful interview questions based on the candidate\'s CV and the position they are applying for.',
         },
         {
           role: 'user',
-          content: `
-Generate exactly 5 interview questions for a "${position}" position
-based on the following CV.
+          content: `Generate 5 interview questions for a ${position} position based on this CV:
 
-Rules:
-- Return ONLY a valid JSON array of strings
-- No numbering
-- No extra text
-
-CV:
 ${cvText}
-`,
+
+Requirements:
+- Questions should be specific to their experience and skills
+- Mix of technical and behavioral questions
+- Professional and relevant
+- Each question should be clear and concise
+
+Respond with a JSON array of question strings. `,
         },
       ],
-      temperature: 0.7,
-      max_tokens: 600,
+      temperature: 0.8,
+      max_tokens: 800,
     })
 
-    const content = completion.choices[0].message.content ?? '[]'
+    console.log('✅ OpenAI response received')
 
-    // -----------------------------
-    // SAFE PARSE
-    // -----------------------------
-    let questionTexts: string[] = []
+    const content = completion.choices[0].message. content || '[]'
+    console.log('📝 Generated content:', content)
 
-    try {
-      const parsed = JSON.parse(content)
-      if (Array.isArray(parsed)) {
-        questionTexts = parsed
-      }
-    } catch {
-      questionTexts = content
-        .split('\n')
-        .map(q => q.replace(/^[0-9.\-\s]+/, '').trim())
-        .filter(Boolean)
-        .slice(0, 5)
-    }
+    const questionTexts: string[] = JSON.parse(content)
 
-    const questions: Question[] = questionTexts.map((text, index) => ({
+    const questions:  Question[] = questionTexts.map((text, index) => ({
       id: `q-${index + 1}`,
       interview_id: 'temp-id',
       question_text: text,
-      order: index + 1, // ✅ DOĞRU ALAN
+      order_num: index + 1,
       created_at: new Date().toISOString(),
     }))
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: { questions },
-      } as ApiResponse,
-      { status: 200 }
-    )
+    console.log('✅ Questions generated:', questions.length)
+
+    return NextResponse.json({
+      success: true,
+      data:  { questions },
+    } as ApiResponse)
   } catch (error) {
     console.error('💥 Question generation error:', error)
+    console.error('Error details:', error instanceof Error ? error. message : 'Unknown error')
 
-    return NextResponse.json(
+    // Hata olursa mock dön
+    console.log('⚠️ Falling back to mock questions due to error')
+
+    const { cvText, position } = await request.json()
+
+    const mockQuestions: Question[] = [
       {
-        success: false,
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Failed to generate questions',
-      } as ApiResponse,
-      { status: 500 }
-    )
+        id: 'q-1',
+        interview_id: 'temp-id',
+        question_text: `${position} pozisyonu için en önemli becerileriniz nelerdir?`,
+        order_num: 1,
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'q-2',
+        interview_id: 'temp-id',
+        question_text: 'Geçmiş projelerinizde karşılaştığınız en büyük zorluk neydi?',
+        order_num: 2,
+        created_at: new Date().toISOString(),
+      },
+      {
+        id:  'q-3',
+        interview_id: 'temp-id',
+        question_text:  'Neden bu pozisyona başvurdunuz? ',
+        order_num: 3,
+        created_at:  new Date().toISOString(),
+      },
+      {
+        id: 'q-4',
+        interview_id: 'temp-id',
+        question_text: 'Ekip çalışması konusunda bir deneyiminizi anlatır mısınız?',
+        order_num: 4,
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'q-5',
+        interview_id: 'temp-id',
+        question_text: '5 yıl sonra kendinizi nerede görüyorsunuz?',
+        order_num: 5,
+        created_at: new Date().toISOString(),
+      },
+    ]
+
+    return NextResponse.json({
+      success: true,
+      data: { questions: mockQuestions },
+    } as ApiResponse)
   }
 }
