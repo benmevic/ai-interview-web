@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import QuestionCard from '@/components/QuestionCard'
 import { Question, Interview } from '@/lib/types'
 import { CheckCircle, Award } from 'lucide-react'
-import { supabase } from '@/lib/supabase'  // ← EKLE
+import { supabase } from '@/lib/supabase'
 
 /**
  * Active interview page with questions and answers
@@ -23,48 +23,29 @@ export default function InterviewPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
- useEffect(() => {
-  const loadInterview = async () => {
-    try {
-      // ✅ Supabase session kontrolü
-      const { data: { session }, error:  sessionError } = await supabase. auth.getSession()
+  useEffect(() => {
+    const loadInterview = async () => {
+      try {
+        // ✅ Supabase session kontrolü
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession()
 
-      if (sessionError || !session) {
-        console.error('❌ No session, redirecting to login')
-        router.push('/login')
-        return
-      }
+        if (sessionError || !session) {
+          console.error('❌ No session, redirecting to login')
+          router.push('/login')
+          return
+        }
 
-      console.log('✅ Session OK, fetching interview:', interviewId)
+        console.log('✅ Session OK, fetching interview:', interviewId)
 
-      // ✅ Interview ve questions çek
-      const response = await fetch(`/api/interview/${interviewId}`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      })
-
-      const data = await response.json()
-
-      if (! response.ok) {
-        console.error('❌ Interview fetch error:', data.error)
-        throw new Error(data.error || 'Mülakat yüklenemedi')
-      }
-
-      console.log('✅ Interview loaded:', data. data)
-
-      setInterview(data.data. interview)
-      setQuestions(data.data.questions || [])
-    } catch (err) {
-      console.error('💥 Load interview error:', err)
-      setError(err instanceof Error ? err.message :  'Bir hata oluştu')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  loadInterview()
-}, [router, interviewId])
+        // ✅ Interview ve questions çek
+        const response = await fetch(`/api/interview/${interviewId}`, {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        })
 
         const data = await response.json()
 
@@ -73,13 +54,13 @@ export default function InterviewPage() {
           throw new Error(data.error || 'Mülakat yüklenemedi')
         }
 
-        console.log('✅ Interview loaded:', data.data)
+        console.log('✅ Interview loaded:', data. data)
 
-        setInterview(data. data.interview)
+        setInterview(data.data. interview)
         setQuestions(data.data.questions || [])
       } catch (err) {
         console.error('💥 Load interview error:', err)
-        setError(err instanceof Error ? err.message : 'Bir hata oluştu')
+        setError(err instanceof Error ? err.message :  'Bir hata oluştu')
       } finally {
         setIsLoading(false)
       }
@@ -87,9 +68,6 @@ export default function InterviewPage() {
 
     loadInterview()
   }, [router, interviewId])
-
-  // ...  geri kalan kod aynı kalacak
-
 
   const handleSubmitAnswer = async (answer: string) => {
     try {
@@ -99,14 +77,14 @@ export default function InterviewPage() {
         body: JSON.stringify({
           questionId: questions[currentQuestionIndex].id,
           answer,
-          question: questions[currentQuestionIndex].question_text,
+          question: questions[currentQuestionIndex]. question_text,
         }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to evaluate answer')
+        throw new Error(data. error || 'Failed to evaluate answer')
       }
 
       // Update question with evaluation
@@ -126,17 +104,17 @@ export default function InterviewPage() {
         }
       }, 2000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit answer')
+      setError(err instanceof Error ? err. message : 'Failed to submit answer')
     }
   }
 
   const isInterviewComplete =
     questions.length > 0 &&
-    questions.every((q) => q.answer_text && q.score !== undefined)
+    questions. every((q) => q.answer_text && q.score !== undefined)
 
   const totalScore = isInterviewComplete
     ? Math.round(
-        questions.reduce((sum, q) => sum + (q.score || 0), 0) / questions.length * 10
+        (questions.reduce((sum, q) => sum + (q.score || 0), 0) / questions.length) * 10
       )
     : 0
 
@@ -209,7 +187,7 @@ export default function InterviewPage() {
 
   return (
     <div className="gradient-bg min-h-[calc(100vh-4rem)] py-12">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg: px-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">{interview.title}</h1>
@@ -249,7 +227,7 @@ export default function InterviewPage() {
           <QuestionCard
             question={questions[currentQuestionIndex]}
             onSubmitAnswer={handleSubmitAnswer}
-            isAnswered={!!questions[currentQuestionIndex].answer_text}
+            isAnswered={!! questions[currentQuestionIndex].answer_text}
           />
         )}
 
@@ -258,7 +236,7 @@ export default function InterviewPage() {
           <div className="mt-8 flex justify-between">
             <Button
               variant="outline"
-              onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
+              onClick={() => setCurrentQuestionIndex(Math. max(0, currentQuestionIndex - 1))}
               disabled={currentQuestionIndex === 0}
             >
               Önceki
