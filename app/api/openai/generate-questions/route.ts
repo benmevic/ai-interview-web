@@ -1,3 +1,7 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { openai } from '@/lib/openai'
+import { ApiResponse, Question } from '@/lib/types'
+
 export async function POST(request: NextRequest) {
   try {
     const { cvText, position } = await request.json()
