@@ -8,6 +8,66 @@ import pdf from 'pdf-parse'
  */
 export async function POST(request: NextRequest) {
   try {
+    console.log('🚀 Create interview started')
+
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
+    
+    console.log('🔐 Token:', token ?  'exists' : 'missing')
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: 'Yetkilendirme gerekli' } as ApiResponse,
+        { status: 401 }
+      )
+    }
+
+    const { data:  { user }, error:  authError } = await supabase.auth.getUser(token)
+    
+    console.log('👤 User:', user?.email, 'Error:', authError?. message)
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Geçersiz token' } as ApiResponse,
+        { status: 401 }
+      )
+    }
+
+    const formData = await request.formData()
+    const file = formData.get('cv') as File
+    const title = formData.get('title') as string
+    const position = formData.get('position') as string
+
+    console.log('📋 Form data:', { title, position, hasFile: !!file })
+
+    if (!file || !title || !position) {
+      return NextResponse.json(
+        { success: false, error: 'Eksik alanlar' } as ApiResponse,
+        { status: 400 }
+      )
+    }
+
+    // PDF parse kısmı
+    console.log('📄 Parsing PDF...')
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const pdfData = await pdf(buffer)
+    const cvText = pdfData.text
+    
+    console.log('✅ PDF parsed, text length:', cvText.length)
+
+    // ...  geri kalan kod
+
+  } catch (error) {
+    console.error('💥 Create interview error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Failed to create interview' } as ApiResponse,
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
     const formData = await request.formData()
     const file = formData.get('cv') as File
     const title = formData.get('title') as string
