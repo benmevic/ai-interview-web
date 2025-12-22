@@ -13,29 +13,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 🔐 Auth user al
+    // 🔐 Auth user
     const {
       data: { user },
-      error: userError,
+      error: authError,
     } = await supabase.auth.getUser()
 
-    if (userError || !user) {
+    if (authError || !user) {
       return NextResponse.json(
         { success: false, error: 'Yetkisiz' } as ApiResponse,
         { status: 401 }
       )
     }
 
-    // 🧠 Interview oluştur
+    // 💾 Interview insert (🔥 KRİTİK as any)
     const { data: interview, error: interviewError } = await supabase
       .from('interviews')
-      .insert({
-        user_id: user.id,
-        title,
-        position,
-        cv_text: cvText,
-        status: 'pending',
-      })
+      .insert(
+        {
+          user_id: user.id,
+          title,
+          position,
+          cv_text: cvText,
+          status: 'pending',
+        } as any
+      )
       .select()
       .single()
 
@@ -52,12 +54,12 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('💥 Interview create error:', error)
+    console.error('💥 Create interview error:', error)
 
     return NextResponse.json(
       {
         success: false,
-        error: 'Soru üretimi başarısız',
+        error: 'Interview oluşturulamadı',
       } as ApiResponse,
       { status: 500 }
     )
