@@ -1,89 +1,147 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '@/lib/supabase'
 import { ApiResponse } from '@/lib/types'
+import pdf from 'pdf-parse'
 
 export async function POST(request: NextRequest) {
   try {
-    // 🔐 Authorization header al
+    console.log('🚀 Interview create started')
+
+    // ---------- AUTH ----------
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
 
     if (!token) {
       return NextResponse.json(
-        { success: false, error: 'Token yok' } as ApiResponse,
+        { success: false, error: 'Token gerekli' } as ApiResponse,
         { status: 401 }
       )
     }
 
-    // 🔥 TOKEN İLE SERVER SUPABASE CLIENT
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      }
-    )
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token)
 
-    const { title, position, cvText } = await request.json()
+    if (authError || !user) {
+      console.error('❌ Auth error:', authError)
+      return NextResponse.json(
+        { success: false, error: 'Geçersiz token' } as ApiResponse,
+        { status: 401 }
+      )
+    }
 
-    if (!title || !position || !cvText) {
+    console.log('✅ User authenticated:', user.email)
+
+    // ---------- FORM DATA ----------
+    const formData = await request.formData()
+    const file = formData.get('cv') as File
+    const title = formData.get('title') as string
+    const position = formData. get('position') as string
+
+    if (!file || !title || !position) {
       return NextResponse.json(
         { success: false, error: 'Eksik alanlar' } as ApiResponse,
         { status: 400 }
       )
     }
 
-    // 👤 User artık GERÇEKTEN geliyor
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser()
+    console.log('📋 Form data received:', { title, position, fileName: file.name })
 
-    if (userError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Yetkisiz kullanıcı' } as ApiResponse,
-        { status: 401 }
-      )
-    }
+    // ---------- PDF PARSE ----------
+    console.log('📄 Parsing PDF...')
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const pdfData = await pdf(buffer)
+    const cvText = pdfData.text
 
-    // 💾 Interview insert
-    const { data: interview, error: insertError } = await supabase
+    console.log('✅ PDF parsed, text length:', cvText.length)
+
+    // ---------- INTERVIEW INSERT ----------
+    console.log('💾 Inserting interview...')
+    const { data: interview, error: interviewError } = await supabase
       .from('interviews')
-      .insert(
-        {
-          user_id: user.id,
-          title,
-          position,
-          cv_text: cvText,
-          status: 'pending',
-        } as any
-      )
+      .insert({
+        user_id: user.id,
+        title,
+        position,
+        cv_text: cvText,
+        status: 'in_progress',
+      } as any)
       .select()
       .single()
 
-    if (insertError) {
-      console.error('❌ Insert error:', insertError)
-      throw insertError
+    if (interviewError || !interview) {
+      console.error('❌ Interview insert error:', interviewError)
+      throw new Error('Interview insert failed:  ' + interviewError?.message)
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: { interview },
-      } as ApiResponse,
-      { status: 200 }
-    )
-  } catch (error) {
-    console.error('💥 API Error:', error)
+    const interviewId = (interview as any).id
+    console.log('✅ Interview created:', interviewId)
 
+    // ---------- GENERATE QUESTIONS ----------
+    let questions: any[] = []
+
+    try {
+      console.log('🤖 Generating questions...')
+      const questionsRes = await fetch(
+        `${request.nextUrl.origin}/api/openai/generate-questions`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON. stringify({ cvText, position }),
+        }
+      )
+
+      const questionsResult = await questionsRes.json()
+      console.log('📥 Questions response:', questionsResult)
+
+      if (questionsRes.ok && questionsResult?. data?.questions) {
+        questions = questionsResult.data.questions
+        console.log('✅ Questions generated:', questions.length)
+      } else {
+        console.warn('⚠️ Question generation failed, using empty array')
+      }
+    } catch (err) {
+      console.error('⚠️ Question generation error:', err)
+      // Continue without questions
+    }
+
+    // ---------- INSERT QUESTIONS ----------
+    if (questions.length > 0) {
+      console.log('💾 Inserting questions.. .')
+      const questionsToInsert = questions.map((q:  any, index: number) => ({
+        interview_id: interviewId,
+        question_text: q.question_text || q.text || String(q),
+        order_num: index + 1,
+      }))
+
+      const { error:  questionsError } = await supabase
+        .from('questions')
+        .insert(questionsToInsert as any)
+
+      if (questionsError) {
+        console.error('❌ Questions insert error:', questionsError)
+        // Don't fail the whole request, just log
+      } else {
+        console.log('✅ Questions inserted:', questions.length)
+      }
+    }
+
+    // ---------- RESPONSE ----------
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: interviewId,
+        interview,
+        questions_count: questions.length,
+      },
+    } as ApiResponse)
+  } catch (error) {
+    console.error('💥 Create interview error:', error)
     return NextResponse.json(
       {
         success: false,
-        error: 'Interview oluşturulamadı',
+        error: error instanceof Error ? error.message : 'Interview oluşturulamadı',
       } as ApiResponse,
       { status: 500 }
     )
