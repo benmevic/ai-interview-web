@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { openai, getOpenAI } from '@/lib/openai'
-import { ApiResponse, Question } from '@/lib/types'
+import { openai } from '@/lib/openai'
+import { ApiResponse, Evaluation } from '@/lib/types'
 
 /**
- * Generate interview questions with OpenAI API endpoint
+ * Evaluate answer with OpenAI API endpoint
  */
-export async function POST(request:  NextRequest) {
+export async function POST(request:   NextRequest) {
   // ✅ BODY'Yİ BAŞTA OKU
-  let cvText = ''
-  let position = ''
+  let questionId = ''
+  let question = ''
+  let answer = ''
 
   try {
     const body = await request.json()
-    cvText = body.cvText
-    position = body.position
+    questionId = body.questionId
+    question = body.question
+    answer = body.answer
   } catch (parseError) {
     console.error('❌ Request body parse error:', parseError)
     return NextResponse.json(
@@ -23,179 +25,129 @@ export async function POST(request:  NextRequest) {
   }
 
   try {
-    // 🔍 DEBUG: Key var mı kontrol et
-    const apiKey = process.env.OPENAI_API_KEY
-    console.log('🔑 OpenAI Key Check:', {
-      exists: !!apiKey,
-      prefix: apiKey?.substring(0, 8),
-      length: apiKey?.length,
-      startsWithSk: apiKey?.startsWith('sk-'),
+    console.log('🧠 Evaluating answer.. .')
+    console.log('📝 Evaluation request:', {
+      questionId,
+      questionLength: question?. length,
+      answerLength: answer?.length,
     })
 
-    // OpenAI client test
-    try {
-      const testClient = getOpenAI()
-      console.log('✅ OpenAI client created successfully')
-    } catch (clientErr) {
-      console.error('❌ OpenAI client creation failed:', clientErr)
-    }
-
-    if (!cvText || !position) {
+    if (!question || !answer) {
       return NextResponse.json(
-        { success: false, error: 'CV text and position are required' } as ApiResponse,
-        { status: 400 }
+        { success: false, error: 'Question and answer are required' } as ApiResponse,
+        { status:  400 }
       )
     }
 
-    // ✅ MOCK SORULAR (OpenAI key yoksa veya hata olursa)
+    // ✅ MOCK EVALUATION (OpenAI key yoksa veya hata olursa)
     const useMock = ! process.env.OPENAI_API_KEY
 
     if (useMock) {
-      console.log('⚠️ Using mock questions (no OpenAI key)')
+      console.log('⚠️ Using mock evaluation (no OpenAI key)')
 
-      const mockQuestions: Question[] = [
-        {
-          id: 'q-1',
-          interview_id: 'temp-id',
-          question_text: `${position} pozisyonu için en önemli becerileriniz nelerdir?`,
-          order_num: 1,
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: 'q-2',
-          interview_id: 'temp-id',
-          question_text: 'Geçmiş projelerinizde karşılaştığınız en büyük zorluk neydi ve nasıl çözdünüz?',
-          order_num: 2,
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: 'q-3',
-          interview_id: 'temp-id',
-          question_text: 'Neden bu pozisyona başvurdunuz ve şirketimize neler katabilirsiniz?',
-          order_num: 3,
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: 'q-4',
-          interview_id: 'temp-id',
-          question_text: 'Ekip çalışması konusunda bir deneyiminizi detaylı anlatır mısınız?',
-          order_num: 4,
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: 'q-5',
-          interview_id: 'temp-id',
-          question_text: 'Kendinizi 5 yıl sonra nerede görüyorsunuz?',
-          order_num: 5,
-          created_at: new Date().toISOString(),
-        },
-      ]
+      const answerLength = answer.split(' ').length
+      let score = 7
+
+      if (answerLength > 50) score = 9
+      else if (answerLength > 30) score = 8
+      else if (answerLength < 10) score = 5
+
+      const mockEvaluation = {
+        score,
+        feedback: 
+          'Cevabınız genel olarak iyiydi.   Daha spesifik örnekler vererek cevabınızı güçlendirebilirsiniz.',
+        strengths: [
+          'Konuya hakim olduğunuz anlaşılıyor',
+          'Net ve anlaşılır ifade kullandınız',
+        ],
+        improvements: [
+          'Daha fazla teknik detay ekleyebilirsiniz',
+          'Gerçek dünya örnekleri ile destekleyebilirsiniz',
+        ],
+      }
 
       return NextResponse.json({
         success: true,
-        data: { questions: mockQuestions },
+        data: {
+          questionId,
+          ... mockEvaluation,
+        },
       } as ApiResponse)
     }
 
     // ✅ GERÇEK OpenAI çağrısı
-    console.log('📡 Calling OpenAI API...')
+    console.log('📡 Calling OpenAI for evaluation...')
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      messages:  [
+      messages:   [
         {
           role:  'system',
-          content: 
-            'You are an expert interviewer.  Generate relevant, insightful interview questions based on the candidate\'s CV and the position they are applying for.',
+          content:  
+            'You are an expert interviewer evaluating candidate responses.   Provide constructive feedback with a score out of 10.',
         },
         {
           role: 'user',
-          content: `Generate 5 interview questions for a ${position} position based on this CV: 
+          content: `Evaluate this interview answer: 
 
-${cvText}
+Question: ${question}
 
-Requirements:
-- Questions should be specific to their experience and skills
-- Mix of technical and behavioral questions
-- Professional and relevant
-- Each question should be clear and concise
+Answer: ${answer}
 
-Respond with a JSON array of question strings. `,
+Provide: 
+1. Score (0-10)
+2. Detailed feedback (2-3 sentences)
+3. Strengths (array of 2-3 points)
+4. Areas for improvement (array of 2-3 points)
+
+Respond in JSON format with keys: score, feedback, strengths, improvements`,
         },
       ],
-      temperature: 0.8,
-      max_tokens: 800,
+      temperature:  0.7,
+      max_tokens: 500,
     })
 
-    console.log('✅ OpenAI response received')
+    console.log('✅ OpenAI evaluation received')
 
-    const content = completion.choices[0].message.content || '[]'
-    console.log('📝 Generated content:', content)
+    const content = completion.choices[0].message.content || '{}'
+    console.log('📝 Evaluation content:', content)
 
-    const questionTexts:  string[] = JSON.parse(content)
-
-    const questions: Question[] = questionTexts.map((text, index) => ({
-      id: `q-${index + 1}`,
-      interview_id: 'temp-id',
-      question_text: text,
-      order_num: index + 1,
-      created_at: new Date().toISOString(),
-    }))
-
-    console.log('✅ Questions generated:', questions.length)
+    const evaluation:  Evaluation = JSON.parse(content)
 
     return NextResponse.json({
       success: true,
-      data:  { questions },
+      data: {
+        questionId,
+        score: evaluation.score,
+        feedback: evaluation.feedback,
+        strengths: evaluation.strengths,
+        improvements: evaluation.improvements,
+      },
     } as ApiResponse)
   } catch (error) {
-    console.error('💥 Question generation error:', error)
-    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error')
+    console.error('💥 Answer evaluation error:', error)
+    console.error('Error details:', error instanceof Error ? error. message : 'Unknown')
 
     // ✅ Hata olursa mock dön (body tekrar okuma YOK!)
-    console.log('⚠️ Falling back to mock questions due to error')
+    console.log('⚠️ Falling back to mock evaluation due to error')
 
-    const mockQuestions: Question[] = [
-      {
-        id: 'q-1',
-        interview_id: 'temp-id',
-        question_text: `${position} pozisyonu için en önemli becerileriniz nelerdir?`,
-        order_num: 1,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: 'q-2',
-        interview_id: 'temp-id',
-        question_text: 'Geçmiş projelerinizde karşılaştığınız en büyük zorluk neydi? ',
-        order_num: 2,
-        created_at:  new Date().toISOString(),
-      },
-      {
-        id: 'q-3',
-        interview_id: 'temp-id',
-        question_text: 'Neden bu pozisyona başvurdunuz?',
-        order_num: 3,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: 'q-4',
-        interview_id:  'temp-id',
-        question_text: 'Ekip çalışması konusunda bir deneyiminizi anlatır mısınız?',
-        order_num: 4,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: 'q-5',
-        interview_id: 'temp-id',
-        question_text: '5 yıl sonra kendinizi nerede görüyorsunuz?',
-        order_num: 5,
-        created_at: new Date().toISOString(),
-      },
-    ]
+    const answerLength = answer.split(' ').length
+    let score = 7
+
+    if (answerLength > 50) score = 9
+    else if (answerLength > 30) score = 8
+    else if (answerLength < 10) score = 5
 
     return NextResponse.json({
       success: true,
-      data: { questions: mockQuestions },
+      data: {
+        questionId,
+        score,
+        feedback: 
+          'Cevabınız değerlendirildi.  Daha detaylı ve spesifik cevaplar vererek puanınızı artırabilirsiniz.',
+        strengths: ['Soruyu anladınız', 'Net cevap verdiniz'],
+        improvements: ['Daha fazla örnek verebilirsiniz', 'Teknik detayları ekleyebilirsiniz'],
+      },
     } as ApiResponse)
   }
 }
