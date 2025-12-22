@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import InterviewCard from '@/components/InterviewCard'
 import { Interview } from '@/lib/types'
 import { Plus, TrendingUp } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 /**
  * Dashboard page showing user's interview history and statistics
