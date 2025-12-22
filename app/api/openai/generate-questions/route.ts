@@ -5,19 +5,29 @@ import { ApiResponse, Question } from '@/lib/types'
 /**
  * Generate interview questions with OpenAI API endpoint
  */
+
+
 export async function POST(request: NextRequest) {
   try {
-    // 🔍 DEBUG: OpenAI key kontrol
-    const hasKey = !!process.env.OPENAI_API_KEY
+    // 🔍 EXTREME DEBUG
+    const apiKey = process.env.OPENAI_API_KEY
+    console.log('🔑 OpenAI Key Check:', {
+      exists: !!apiKey,
+      prefix: apiKey?. substring(0, 8),
+      length: apiKey?. length,
+      startsWithSk: apiKey?.startsWith('sk-'),
+    })
+
+    // OpenAI client oluşturmayı test et
+    try {
+      const testClient = new OpenAI({ apiKey: apiKey || '' })
+      console.log('✅ OpenAI client created successfully')
+    } catch (clientErr) {
+      console.error('❌ OpenAI client creation failed:', clientErr)
+    }
 
     const { cvText, position } = await request.json()
-
-    if (!cvText || !position) {
-      return NextResponse.json(
-        { success: false, error: 'CV text and position are required' } as ApiResponse,
-        { status: 400 }
-      )
-    }
+    
 
     // -----------------------------
     // MOCK QUESTIONS (Key yoksa)
