@@ -37,7 +37,6 @@ export default function LoginPage() {
       }
 
       // Store user session
-      localStorage.setItem('user_session', JSON.stringify(data.data))
       
       // Redirect to dashboard
       router.push('/dashboard')
