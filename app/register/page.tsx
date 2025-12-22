@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { UserPlus } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 /**
  * Registration page with email/password
@@ -36,25 +37,28 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      // ✅ Direkt Supabase kullan
+      const { data, error: signUpError } = await supabase. auth.signUp({
+        email,
+        password,
       })
 
-      const data = await response.json()
+      console.log('📥 Register response:', { data, error: signUpError })
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed')
+      if (signUpError) {
+        throw new Error(signUpError.message || 'Kayıt başarısız')
       }
 
-      // Store user session
-      
-      // Redirect to dashboard
-      router.push('/dashboard')
+      if (!data.session) {
+        throw new Error('Oturum oluşturulamadı')
+      }
+
+      console.log('✅ Registration successful!')
+
+      // Direkt yönlendir
+      window.location. href = '/dashboard'
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
+      setError(err instanceof Error ? err. message : 'Bir hata oluştu')
       setIsLoading(false)
     }
   }
@@ -117,7 +121,7 @@ export default function RegisterPage() {
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                Zaten hesabınız var mı?{' '}
+                Zaten hesabınız var mı? {' '}
                 <Link href="/login" className="font-medium text-primary-600 hover:text-primary-700">
                   Giriş Yap
                 </Link>
