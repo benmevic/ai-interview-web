@@ -30,7 +30,7 @@ export default function InterviewPage() {
         const {
           data: { session },
           error: sessionError,
-        } = await supabase.auth.getSession()
+        } = await supabase.auth. getSession()
 
         if (sessionError || !session) {
           console.error('❌ No session, redirecting to login')
@@ -77,18 +77,18 @@ export default function InterviewPage() {
         body: JSON.stringify({
           questionId: questions[currentQuestionIndex].id,
           answer,
-          question: questions[currentQuestionIndex]. question_text,
+          question:  questions[currentQuestionIndex].question_text,
         }),
       })
 
-      const data = await response.json()
+      const data = await response. json()
 
-      if (!response.ok) {
-        throw new Error(data. error || 'Failed to evaluate answer')
+      if (!response. ok) {
+        throw new Error(data.error || 'Failed to evaluate answer')
       }
 
       // Update question with evaluation
-      const updatedQuestions = [...questions]
+      const updatedQuestions = [... questions]
       updatedQuestions[currentQuestionIndex] = {
         ...updatedQuestions[currentQuestionIndex],
         answer_text: answer,
@@ -97,25 +97,59 @@ export default function InterviewPage() {
       }
       setQuestions(updatedQuestions)
 
-      // Move to next question after a delay
-      setTimeout(() => {
-        if (currentQuestionIndex < questions.length - 1) {
-          setCurrentQuestionIndex(currentQuestionIndex + 1)
+      // ✅ SON SORU MU KONTROL ET
+      const isLastQuestion = currentQuestionIndex === questions.length - 1
+      const allAnswered = updatedQuestions.every((q) => q.answer_text)
+
+      if (isLastQuestion && allAnswered) {
+        console.log('🏁 All questions answered, completing interview...')
+
+        // Mülakat tamamlama API'sini çağır
+        try {
+          const sessionData = await supabase.auth. getSession()
+          const completeResponse = await fetch(`/api/interview/${interviewId}/complete`, {
+            method: 'POST',
+            headers:  {
+              Authorization: `Bearer ${sessionData.data. session?. access_token}`,
+            },
+          })
+
+          const completeData = await completeResponse.json()
+
+          if (completeResponse.ok) {
+            console.log('✅ Interview completed:', completeData.data.score)
+            // Interview state'ini güncelle
+            if (interview) {
+              setInterview({
+                ...interview,
+                status: 'completed',
+                score: completeData.data.score,
+              })
+            }
+          } else {
+            console.error('❌ Complete interview failed:', completeData.error)
+          }
+        } catch (completeError) {
+          console. error('⚠️ Complete interview error:', completeError)
         }
-      }, 2000)
+      } else {
+        // Sonraki soruya geç
+        setTimeout(() => {
+          if (currentQuestionIndex < questions.length - 1) {
+            setCurrentQuestionIndex(currentQuestionIndex + 1)
+          }
+        }, 2000)
+      }
     } catch (err) {
-      setError(err instanceof Error ? err. message : 'Failed to submit answer')
+      setError(err instanceof Error ? err.message : 'Failed to submit answer')
     }
   }
 
   const isInterviewComplete =
-    questions.length > 0 &&
-    questions. every((q) => q.answer_text && q.score !== undefined)
+    questions.length > 0 && questions. every((q) => q.answer_text && q.score !== undefined)
 
   const totalScore = isInterviewComplete
-    ? Math.round(
-        (questions.reduce((sum, q) => sum + (q.score || 0), 0) / questions.length) * 10
-      )
+    ? Math.round((questions.reduce((sum, q) => sum + (q.score || 0), 0) / questions.length) * 10)
     : 0
 
   if (isLoading) {
@@ -151,9 +185,7 @@ export default function InterviewPage() {
           <Card className="text-center">
             <CardContent className="p-12">
               <Award className="mx-auto h-16 w-16 text-primary-600" />
-              <h1 className="mt-4 text-3xl font-bold text-gray-900">
-                Mülakat Tamamlandı!
-              </h1>
+              <h1 className="mt-4 text-3xl font-bold text-gray-900">Mülakat Tamamlandı!</h1>
               <p className="mt-2 text-lg text-gray-600">
                 {interview.title} mülakatını tamamladığınız için tebrikler
               </p>
@@ -171,9 +203,7 @@ export default function InterviewPage() {
               </div>
 
               <div className="mt-8 flex justify-center space-x-4">
-                <Button onClick={() => router.push('/dashboard')}>
-                  Kontrol Paneline Dön
-                </Button>
+                <Button onClick={() => router.push('/dashboard')}>Kontrol Paneline Dön</Button>
                 <Button variant="outline" onClick={() => router.push('/interview/new')}>
                   Yeni Mülakat Başlat
                 </Button>
@@ -187,7 +217,7 @@ export default function InterviewPage() {
 
   return (
     <div className="gradient-bg min-h-[calc(100vh-4rem)] py-12">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg: px-8">
+      <div className="mx-auto max-w-4xl px-4 sm: px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">{interview.title}</h1>
