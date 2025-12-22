@@ -29,32 +29,40 @@ export default function DashboardPage() {
     setUser(userData)
 
     // Fetch interviews (mock data for now)
-    setTimeout(() => {
-      const mockInterviews: Interview[] = [
-        {
-          id: '1',
-          user_id: userData.id,
-          title: 'Software Engineer Interview',
-          position: 'Senior Frontend Developer',
-          status: 'completed',
-          score: 85,
-          created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: '2',
-          user_id: userData.id,
-          title: 'Product Manager Interview',
-          position: 'Product Manager',
-          status: 'in_progress',
-          created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-      ]
-      setInterviews(mockInterviews)
-      setIsLoading(false)
-    }, 500)
-  }, [router])
+   // ✅ YENİ KOD
+const fetchInterviews = async () => {
+  try {
+    // Supabase session kontrolü
+    const { data: { session }, error:  sessionError } = await supabase. auth.getSession()
+    
+    if (sessionError || !session) {
+      router.push('/login')
+      return
+    }
+
+    setUser(session.user)
+
+    // Gerçek interview'ları çek
+    const { data: interviewsData, error: interviewsError } = await supabase
+      .from('interviews')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .order('created_at', { ascending:  false })
+
+    if (interviewsError) {
+      console.error('Interviews fetch error:', interviewsError)
+      setInterviews([])
+    } else {
+      setInterviews(interviewsData || [])
+    }
+  } catch (error) {
+    console.error('Error:', error)
+  } finally {
+    setIsLoading(false)
+  }
+}
+
+fetchInterviews()
 
   const completedInterviews = interviews.filter((i) => i.status === 'completed')
   const averageScore =
