@@ -1,33 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { ApiResponse } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
   try {
-    const { title, position, cvText } = await request.json()
+    // 🔐 Authorization header al
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
 
-    if (!title || !position || !cvText) {
+    if (!token) {
       return NextResponse.json(
-        { success: false, error: 'Eksik alanlar var' } as ApiResponse,
-        { status: 400 }
-      )
-    }
-
-    // 🔐 Auth user
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'Yetkisiz' } as ApiResponse,
+        { success: false, error: 'Token yok' } as ApiResponse,
         { status: 401 }
       )
     }
 
-    // 💾 Interview insert (🔥 KRİTİK as any)
-    const { data: interview, error: interviewError } = await supabase
+    // 🔥 TOKEN İLE SERVER SUPABASE CLIENT
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      }
+    )
+
+    const { title, position, cvText } = await request.json()
+
+    if (!title || !position || !cvText) {
+      return NextResponse.json(
+        { success: false, error: 'Eksik alanlar' } as ApiResponse,
+        { status: 400 }
+      )
+    }
+
+    // 👤 User artık GERÇEKTEN geliyor
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Yetkisiz kullanıcı' } as ApiResponse,
+        { status: 401 }
+      )
+    }
+
+    // 💾 Interview insert
+    const { data: interview, error: insertError } = await supabase
       .from('interviews')
       .insert(
         {
@@ -41,9 +65,9 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (interviewError) {
-      console.error('❌ Interview insert error:', interviewError)
-      throw interviewError
+    if (insertError) {
+      console.error('❌ Insert error:', insertError)
+      throw insertError
     }
 
     return NextResponse.json(
@@ -54,7 +78,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
-    console.error('💥 Create interview error:', error)
+    console.error('💥 API Error:', error)
 
     return NextResponse.json(
       {
