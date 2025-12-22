@@ -21,22 +21,39 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchInterviews = async () => {
       try {
-        // Supabase session kontrolü
-        const { data: { session }, error:  sessionError } = await supabase. auth.getSession()
+        console.log('🔍 Checking session.. .')
         
-        if (sessionError || !session) {
-          router. push('/login')
+        // Supabase session kontrolü
+        const { data:  { session }, error:  sessionError } = await supabase. auth.getSession()
+        
+        console.log('📋 Session:', session)
+        console.log('❌ Session Error:', sessionError)
+
+        if (sessionError) {
+          console. error('Session error:', sessionError)
+          router.push('/login')
           return
         }
 
+        if (!session || !session.user) {
+          console.log('⚠️ No session found, redirecting to login')
+          router.push('/login')
+          return
+        }
+
+        console.log('✅ Session found for:', session.user.email)
         setUser(session.user)
 
         // Gerçek interview'ları DB'den çek
+        console.log('📥 Fetching interviews.. .')
         const { data: interviewsData, error: interviewsError } = await supabase
           .from('interviews')
           .select('*')
           .eq('user_id', session.user.id)
-          .order('created_at', { ascending:  false })
+          .order('created_at', { ascending: false })
+
+        console.log('📊 Interviews:', interviewsData)
+        console.log('❌ Interviews Error:', interviewsError)
 
         if (interviewsError) {
           console.error('Interviews fetch error:', interviewsError)
@@ -45,7 +62,7 @@ export default function DashboardPage() {
           setInterviews(interviewsData || [])
         }
       } catch (error) {
-        console.error('Error:', error)
+        console.error('💥 Unexpected error:', error)
         setInterviews([])
       } finally {
         setIsLoading(false)
@@ -57,10 +74,10 @@ export default function DashboardPage() {
 
   const completedInterviews = interviews.filter((i) => i.status === 'completed')
   const averageScore =
-    completedInterviews.length > 0
+    completedInterviews. length > 0
       ? Math.round(
           completedInterviews.reduce((sum, i) => sum + (i.score || 0), 0) /
-            completedInterviews. length
+            completedInterviews.length
         )
       : 0
 
@@ -104,7 +121,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Tamamlanan</p>
-                <p className="mt-1 text-3xl font-bold text-gray-900">{completedInterviews. length}</p>
+                <p className="mt-1 text-3xl font-bold text-gray-900">{completedInterviews.length}</p>
               </div>
               <div className="rounded-full bg-green-100 p-3">
                 <TrendingUp className="h-6 w-6 text-green-600" />
