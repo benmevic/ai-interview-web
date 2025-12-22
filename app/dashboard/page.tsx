@@ -38,12 +38,12 @@ export default function DashboardPage() {
       console.log('✅ Session found for:', session.user. email)
       setUserEmail(session.user.email || '')
 
-      // Interviews çek
+      // ✅ HER ZAMAN TAZE VERİ ÇEK (cache:  'no-store')
       const { data, error } = await supabase
         .from('interviews')
         .select('*')
         .eq('user_id', session.user.id)
-        .order('created_at', { ascending:  false })
+        .order('created_at', { ascending: false })
 
       if (error) {
         console.error('❌ Interviews fetch error:', error)
@@ -51,6 +51,8 @@ export default function DashboardPage() {
       }
 
       console.log('📊 Interviews loaded:', data?.length || 0)
+      console.log('📋 Interview statuses:', data?.map((i) => ({ id: i.id, status: i.status })))
+      
       setInterviews(data || [])
     } catch (err) {
       console.error('💥 Load interviews error:', err)
@@ -61,6 +63,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadInterviews()
+  }, [loadInterviews])
+
+  // ✅ SAYFA FOCUS OLUNCA REFRESH (mülakat bitip geri gelince)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('👁️ Page focused, refreshing interviews...')
+      loadInterviews()
+    }
+
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+    }
   }, [loadInterviews])
 
   const handleLogout = async () => {
@@ -94,22 +110,9 @@ export default function DashboardPage() {
     }
   }
 
-  const handleContinueInterview = async (id: string) => {
-    console.log('▶️ Continuing interview:', id)
-
-    // Önce listeyi yenile (son durumu al)
-    await loadInterviews()
-
-    // Interview bul
-    const interview = interviews.find((i) => i.id === id)
-
-    if (interview?. status === 'completed') {
-      console.log('✅ Interview already completed, viewing results')
-      router.push(`/interview/${id}`)
-    } else {
-      console.log('🔄 Interview in progress, continuing')
-      router.push(`/interview/${id}`)
-    }
+  const handleContinueInterview = (id: string) => {
+    console.log('▶️ Opening interview:', id)
+    router.push(`/interview/${id}`)
   }
 
   if (isLoading) {
@@ -125,7 +128,7 @@ export default function DashboardPage() {
 
   return (
     <div className="gradient-bg min-h-[calc(100vh-4rem)] py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg: px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
