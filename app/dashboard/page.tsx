@@ -19,37 +19,45 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
-    const fetchInterviews = async () => {
-      try {
-        // Supabase session kontrolü
-        const { data: { session }, error:  sessionError } = await supabase. auth.getSession()
-        
-        if (sessionError || !session) {
-          router.push('/login')
-          return
-        }
-
-        setUser(session.user)
-
-        // Gerçek interview'ları çek
-        const { data: interviewsData, error: interviewsError } = await supabase
-          .from('interviews')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('created_at', { ascending:  false })
-
-        if (interviewsError) {
-          console.error('Interviews fetch error:', interviewsError)
-          setInterviews([])
-        } else {
-          setInterviews(interviewsData || [])
-        }
-      } catch (error) {
-        console.error('Error:', error)
-      } finally {
-        setIsLoading(false)
+  const fetchInterviews = async () => {
+    try {
+      const { data:  { session }, error:  sessionError } = await supabase. auth.getSession()
+      
+      console.  log('🔐 Session:', session)  // ← EKLE
+      console. log('🔐 Session Error:', sessionError)  // ← EKLE
+      
+      if (sessionError || !session) {
+        router.push('/login')
+        return
       }
+
+      setUser(session.user)
+
+      const { data: interviewsData, error: interviewsError } = await supabase
+        .from('interviews')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending:  false })
+
+      console.log('📊 Interviews Data:', interviewsData)  // ← EKLE
+      console.log('📊 Interviews Error:', interviewsError)  // ← EKLE
+
+      if (interviewsError) {
+        console.error('Interviews fetch error:', interviewsError)
+        setInterviews([])
+      } else {
+        setInterviews(interviewsData || [])
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      setInterviews([])
+    } finally {
+      setIsLoading(false)
     }
+  }
+
+  fetchInterviews()
+}, [router])
 
     fetchInterviews()
   }, [router]) // ← useEffect burada kapanıyor! 
