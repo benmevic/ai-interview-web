@@ -18,34 +18,34 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setIsLoading(true)
+  const handleSubmit = async (e: React. FormEvent) => {
+  e.preventDefault()
+  setError('')
+  setIsLoading(true)
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
+  try {
+    const response = await fetch('/api/auth/login', {
+      method:  'POST',
+      headers:  { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
 
-      const data = await response.json()
+    const data = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed')
-      }
-
-      // Store user session
-      
-      // Redirect to dashboard
-      router.push('/dashboard')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setIsLoading(false)
+    if (! response.ok) {
+      throw new Error(data.error || 'Login failed')
     }
+
+    // ❌ KALDIR: localStorage. setItem('user_session', JSON.stringify(data.data))
+    
+    // ✅ Direkt yönlendir (Supabase session otomatik set ediyor)
+    router.push('/dashboard')
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'An error occurred')
+  } finally {
+    setIsLoading(false)
   }
+}
 
   return (
     <div className="gradient-bg flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12">
