@@ -61,6 +61,15 @@ export async function POST(request: NextRequest) {
         preview: answerTrimmed.substring(0, 50),
       })
 
+      const apiKey = process.env.OPENAI_API_KEY
+console.log('🔑 OpenAI Key Status:', {
+  exists: !!apiKey,
+  usingMock: !apiKey,
+  keyPrefix: apiKey?. substring(0, 10),
+})
+
+const useMock = !apiKey
+
       let score = 1 // varsayılan çok düşük
 
       // ÇOK KISA / ANLAMSIZ CEVAPLAR
