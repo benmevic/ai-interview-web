@@ -14,35 +14,64 @@ export async function POST(request: NextRequest) {
     }
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      // ✅ PROD'DA ÇALIŞAN MODEL
+      model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
           content:
-            "You are an expert interviewer. Generate relevant, insightful interview questions based on the candidate's CV and the position they are applying for.",
+            "You are an expert interviewer. Generate concise, professional interview questions.",
         },
         {
           role: 'user',
-          content: `Generate 5 interview questions for a ${position} position based on this CV:
+          content: `
+Generate exactly 5 interview questions for a "${position}" position
+based on the following CV.
 
+Rules:
+- Return ONLY a valid JSON array of strings
+- No explanations
+- No numbering
+- No extra text
+
+CV:
 ${cvText}
-
-Respond with a JSON array of question strings.`,
+`,
         },
       ],
-      temperature: 0.8,
-      max_tokens: 800,
+      temperature: 0.7,
+      max_tokens: 600,
     })
 
-    const content = completion.choices[0].message.content || '[]'
-    const questionTexts: string[] = JSON.parse(content)
+    const content = completion.choices[0].message.content ?? '[]'
 
-    // ✅ Question type ile birebir uyumlu
+    // --------------------
+    // SAFE PARSE
+    // --------------------
+    let questionTexts: string[] = []
+
+    try {
+      const parsed = JSON.parse(content)
+      if (Array.isArray(parsed)) {
+        questionTexts = parsed
+      }
+    } catch {
+      // Fallback (asla patlamaz)
+      questionTexts = content
+        .split('\n')
+        .map(q => q.replace(/^[0-9.\-\s]+/, '').trim())
+        .filter(Boolean)
+        .slice(0, 5)
+    }
+
+    // --------------------
+    // TYPE-SAFE RESPONSE
+    // --------------------
     const questions: Question[] = questionTexts.map((text, index) => ({
       id: `q-${index + 1}`,
       interview_id: 'temp-id',
       question_text: text,
-      order: index + 1, // ⬅️ KRİTİK FIX
+      order: index + 1,
       created_at: new Date().toISOString(),
     }))
 
@@ -54,7 +83,7 @@ Respond with a JSON array of question strings.`,
       { status: 200 }
     )
   } catch (error) {
-    console.error('Question generation error:', error)
+    console.error('❌ OpenAI question generation failed:', error)
 
     return NextResponse.json(
       {
