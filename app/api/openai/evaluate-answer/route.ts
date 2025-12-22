@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { openai } from '@/lib/openai'
+import { getServerSupabase } from '@/lib/supabase-server'
 import { ApiResponse, Evaluation } from '@/lib/types'
 
-/**
- * Evaluate answer with OpenAI API endpoint
- */
-export async function POST(request:   NextRequest) {
-  // ✅ BODY'Yİ BAŞTA OKU
+export async function POST(request: NextRequest) {
   let questionId = ''
   let question = ''
   let answer = ''
@@ -19,76 +16,58 @@ export async function POST(request:   NextRequest) {
   } catch (parseError) {
     console.error('❌ Request body parse error:', parseError)
     return NextResponse.json(
-      { success: false, error: 'Invalid request body' } as ApiResponse,
-      { status: 400 }
+      { success: false, error:  'Invalid request body' } as ApiResponse,
+      { status:  400 }
     )
   }
 
   try {
-    console.log('🧠 Evaluating answer.. .')
-    console.log('📝 Evaluation request:', {
-      questionId,
-      questionLength: question?. length,
-      answerLength: answer?.length,
-    })
+    console.log('🧠 Evaluating answer for question:', questionId)
 
     if (!question || !answer) {
       return NextResponse.json(
-        { success: false, error: 'Question and answer are required' } as ApiResponse,
-        { status:  400 }
+        { success: false, error:  'Question and answer are required' } as ApiResponse,
+        { status: 400 }
       )
     }
 
-    // ✅ MOCK EVALUATION (OpenAI key yoksa veya hata olursa)
-    const useMock = ! process.env.OPENAI_API_KEY
+    const useMock = !process.env. OPENAI_API_KEY
+
+    let evaluationResult: {
+      score: number
+      feedback: string
+      strengths: string[]
+      improvements: string[]
+    }
 
     if (useMock) {
-      console.log('⚠️ Using mock evaluation (no OpenAI key)')
+      console.log('⚠️ Using mock evaluation')
 
       const answerLength = answer.split(' ').length
       let score = 7
-
       if (answerLength > 50) score = 9
       else if (answerLength > 30) score = 8
       else if (answerLength < 10) score = 5
 
-      const mockEvaluation = {
+      evaluationResult = {
         score,
-        feedback: 
-          'Cevabınız genel olarak iyiydi.   Daha spesifik örnekler vererek cevabınızı güçlendirebilirsiniz.',
-        strengths: [
-          'Konuya hakim olduğunuz anlaşılıyor',
-          'Net ve anlaşılır ifade kullandınız',
-        ],
-        improvements: [
-          'Daha fazla teknik detay ekleyebilirsiniz',
-          'Gerçek dünya örnekleri ile destekleyebilirsiniz',
-        ],
+        feedback: 'Cevabınız genel olarak iyiydi.  Daha spesifik örnekler vererek güçlendirebilirsiniz.',
+        strengths: ['Konuya hakim olduğunuz anlaşılıyor', 'Net ifade kullandınız'],
+        improvements: ['Daha fazla teknik detay ekleyin', 'Gerçek örneklerle destekleyin'],
       }
+    } else {
+      console.log('📡 Calling OpenAI for evaluation...')
 
-      return NextResponse.json({
-        success: true,
-        data: {
-          questionId,
-          ... mockEvaluation,
-        },
-      } as ApiResponse)
-    }
-
-    // ✅ GERÇEK OpenAI çağrısı
-    console.log('📡 Calling OpenAI for evaluation...')
-
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages:   [
-        {
-          role:  'system',
-          content:  
-            'You are an expert interviewer evaluating candidate responses.   Provide constructive feedback with a score out of 10.',
-        },
-        {
-          role: 'user',
-          content: `Evaluate this interview answer: 
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert interviewer.  Provide constructive feedback with a score out of 10.',
+          },
+          {
+            role: 'user',
+            content: `Evaluate this interview answer: 
 
 Question: ${question}
 
@@ -101,39 +80,52 @@ Provide:
 4. Areas for improvement (array of 2-3 points)
 
 Respond in JSON format with keys: score, feedback, strengths, improvements`,
-        },
-      ],
-      temperature:  0.7,
-      max_tokens: 500,
-    })
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      })
 
-    console.log('✅ OpenAI evaluation received')
+      const content = completion.choices[0].message. content || '{}'
+      evaluationResult = JSON.parse(content)
+      console.log('✅ OpenAI evaluation received')
+    }
 
-    const content = completion.choices[0].message.content || '{}'
-    console.log('📝 Evaluation content:', content)
+    // ✅ SUPABASE'E KAYDET
+    try {
+      const serverSupabase = getServerSupabase()
 
-    const evaluation:  Evaluation = JSON.parse(content)
+      const { error: updateError } = await serverSupabase
+        .from('questions')
+        .update({
+          answer_text:  answer,
+          score: evaluationResult.score,
+          feedback: evaluationResult.feedback,
+        })
+        .eq('id', questionId)
+
+      if (updateError) {
+        console.error('❌ Question update error:', updateError)
+      } else {
+        console.log('✅ Answer saved to database')
+      }
+    } catch (dbError) {
+      console.error('⚠️ Database save failed:', dbError)
+    }
 
     return NextResponse.json({
       success: true,
       data: {
         questionId,
-        score: evaluation.score,
-        feedback: evaluation.feedback,
-        strengths: evaluation.strengths,
-        improvements: evaluation.improvements,
+        ... evaluationResult,
       },
     } as ApiResponse)
   } catch (error) {
-    console.error('💥 Answer evaluation error:', error)
-    console.error('Error details:', error instanceof Error ? error. message : 'Unknown')
+    console.error('💥 Evaluation error:', error)
 
-    // ✅ Hata olursa mock dön (body tekrar okuma YOK!)
-    console.log('⚠️ Falling back to mock evaluation due to error')
-
-    const answerLength = answer.split(' ').length
+    // Fallback mock
+    const answerLength = answer. split(' ').length
     let score = 7
-
     if (answerLength > 50) score = 9
     else if (answerLength > 30) score = 8
     else if (answerLength < 10) score = 5
@@ -143,10 +135,9 @@ Respond in JSON format with keys: score, feedback, strengths, improvements`,
       data: {
         questionId,
         score,
-        feedback: 
-          'Cevabınız değerlendirildi.  Daha detaylı ve spesifik cevaplar vererek puanınızı artırabilirsiniz.',
-        strengths: ['Soruyu anladınız', 'Net cevap verdiniz'],
-        improvements: ['Daha fazla örnek verebilirsiniz', 'Teknik detayları ekleyebilirsiniz'],
+        feedback: 'Cevabınız değerlendirildi.',
+        strengths: ['Soruyu anladınız'],
+        improvements: ['Daha detaylı cevap verin'],
       },
     } as ApiResponse)
   }
