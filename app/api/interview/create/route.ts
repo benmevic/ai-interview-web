@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getServerSupabase } from '@/lib/supabase-server'  // ← YENİ IMPORT
+import { getServerSupabase } from '@/lib/supabase-server'
 import { ApiResponse } from '@/lib/types'
 import pdf from 'pdf-parse'
 
@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🚀 Interview create started')
 
-    // ---------- AUTH (Client Supabase) ----------
+    // ---------- AUTH ----------
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
 
@@ -19,7 +19,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ✅ User doğrulama için CLIENT supabase
     const {
       data: { user },
       error:  authError,
@@ -58,10 +57,8 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ PDF parsed, text length:', cvText.length)
 
-    // ---------- INTERVIEW INSERT (Service Role) ----------
+    // ---------- INTERVIEW INSERT (SERVER SUPABASE) ----------
     console.log('💾 Inserting interview...')
-    
-    // ✅ DB işlemleri için SERVER supabase (RLS bypass)
     const serverSupabase = getServerSupabase()
 
     const { data: interview, error:  interviewError } = await serverSupabase
@@ -105,22 +102,22 @@ export async function POST(request: NextRequest) {
         questions = questionsResult.data.questions
         console.log('✅ Questions generated:', questions.length)
       } else {
-        console. warn('⚠️ Question generation failed, using empty array')
+        console.warn('⚠️ Question generation failed, using empty array')
       }
     } catch (err) {
       console.error('⚠️ Question generation error:', err)
     }
 
-    // ---------- INSERT QUESTIONS (Service Role) ----------
+    // ---------- INSERT QUESTIONS (SERVER SUPABASE) ----------
     if (questions.length > 0) {
-      console.log('💾 Inserting questions.. .')
+      console.log('💾 Inserting questions...')
       const questionsToInsert = questions.map((q: any, index: number) => ({
         interview_id: interviewId,
         question_text: q.question_text || q.text || String(q),
         order_num: index + 1,
       }))
 
-      const { error: questionsError } = await serverSupabase
+      const { error:  questionsError } = await serverSupabase
         .from('questions')
         .insert(questionsToInsert)
 
