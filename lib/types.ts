@@ -25,14 +25,15 @@ export interface Interview {
 /**
  * Question type definition
  */
+
 export interface Question {
   id: string
   interview_id: string
-  question_text: string
-  order: number
+  question_text:  string
+  order_num: number  // ← 'order' yerine 'order_num'
   answer_text?: string
   score?: number
-  feedback?: string
+  feedback?:  string
   created_at: string
 }
 
