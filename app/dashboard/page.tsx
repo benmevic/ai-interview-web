@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase'
  */
 export default function DashboardPage() {
   const router = useRouter()
-  const [interviews, setInterviews] = useState<Interview[]>([])
+  const [interviews, setInterviews] = useState<Interview[]>([]) // ✅ TİPLENDİ
   const [isLoading, setIsLoading] = useState(true)
   const [userEmail, setUserEmail] = useState('')
 
@@ -35,24 +35,28 @@ export default function DashboardPage() {
         return
       }
 
-      console.log('✅ Session found for:', session.user. email)
+      console.log('✅ Session found for:', session.user.email)
       setUserEmail(session.user.email || '')
 
-      // ✅ HER ZAMAN TAZE VERİ ÇEK (cache:  'no-store')
+      // ✅ SUPABASE QUERY (TİPLİ)
       const { data, error } = await supabase
         .from('interviews')
         .select('*')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
+        .returns<Interview[]>() // ✅ TİP ZORLA
 
       if (error) {
         console.error('❌ Interviews fetch error:', error)
         throw error
       }
 
-      console.log('📊 Interviews loaded:', data?.length || 0)
-      console.log('📋 Interview statuses:', data?.map((i) => ({ id: i.id, status: i.status })))
+      console. log('📊 Interviews loaded:', data?.length || 0)
       
+      if (data) {
+        console.log('📋 Interview statuses:', data. map((i) => ({ id: i.id, status: i.status })))
+      }
+
       setInterviews(data || [])
     } catch (err) {
       console.error('💥 Load interviews error:', err)
@@ -65,7 +69,7 @@ export default function DashboardPage() {
     loadInterviews()
   }, [loadInterviews])
 
-  // ✅ SAYFA FOCUS OLUNCA REFRESH (mülakat bitip geri gelince)
+  // ✅ SAYFA FOCUS OLUNCA REFRESH
   useEffect(() => {
     const handleFocus = () => {
       console.log('👁️ Page focused, refreshing interviews...')
@@ -128,7 +132,7 @@ export default function DashboardPage() {
 
   return (
     <div className="gradient-bg min-h-[calc(100vh-4rem)] py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg: px-8">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -177,7 +181,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-blue-600">
-                {interviews. filter((i) => i.status === 'in_progress').length}
+                {interviews.filter((i) => i.status === 'in_progress').length}
               </p>
             </CardContent>
           </Card>
@@ -188,7 +192,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-primary-600">
-                {interviews.filter((i) => i.score).length > 0
+                {interviews. filter((i) => i.score).length > 0
                   ? Math.round(
                       interviews
                         .filter((i) => i.score)
