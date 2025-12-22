@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     const { error: questionsError } = await supabase
       .from('questions')
-      .insert(questionsToInsert)
+      .insert(questionsToInsert as any)
 
     if (questionsError) {
       console.error('❌ Questions save error:', questionsError)
