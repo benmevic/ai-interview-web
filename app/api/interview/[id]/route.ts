@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
+import { getServerSupabase } from '@/lib/supabase-server'
 import { ApiResponse, Interview, Question } from '@/lib/types'
 
 /**
@@ -12,73 +14,83 @@ export async function GET(
   try {
     const interviewId = params.id
 
-    // In a real app, fetch from database
-    // For demo, return mock data
-    const interview: Interview = {
-      id: interviewId,
-      user_id: 'user-123',
-      title: 'Software Engineer Interview',
-      position: 'Senior Frontend Developer',
-      status: 'in_progress',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+    console.log('📥 Fetching interview:', interviewId)
+
+    // ---------- AUTH ----------
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.replace('Bearer ', '')
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: 'Token gerekli' } as ApiResponse,
+        { status: 401 }
+      )
     }
 
-    // Mock questions
-    const questions: Question[] = [
-      {
-        id: '1',
-        interview_id: interviewId,
-        question_text:
-          'Can you describe your experience with React and how you\'ve used it in production applications?',
-        order: 1,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: '2',
-        interview_id: interviewId,
-        question_text:
-          'Tell me about a challenging technical problem you solved recently. What was your approach?',
-        order: 2,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: '3',
-        interview_id: interviewId,
-        question_text:
-          'How do you handle state management in large React applications?',
-        order: 3,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: '4',
-        interview_id: interviewId,
-        question_text:
-          'Describe your experience with TypeScript and why it\'s beneficial in modern web development.',
-        order: 4,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: '5',
-        interview_id: interviewId,
-        question_text:
-          'How do you ensure the accessibility of your web applications?',
-        order: 5,
-        created_at: new Date().toISOString(),
-      },
-    ]
+    // User doğrulama
+    const {
+      data: { user },
+      error:  authError,
+    } = await supabase.auth.getUser(token)
+
+    if (authError || !user) {
+      console.error('❌ Auth error:', authError)
+      return NextResponse.json(
+        { success: false, error: 'Geçersiz token' } as ApiResponse,
+        { status: 401 }
+      )
+    }
+
+    console.log('✅ User authenticated:', user.email)
+
+    // ---------- FETCH INTERVIEW (Server Supabase) ----------
+    const serverSupabase = getServerSupabase()
+
+    const { data:  interview, error: interviewError } = await serverSupabase
+      . from('interviews')
+      .select('*')
+      .eq('id', interviewId)
+      .eq('user_id', user.id) // Sadece kendi mülakatını görebilir
+      .single()
+
+    if (interviewError || !interview) {
+      console.error('❌ Interview not found:', interviewError)
+      return NextResponse.json(
+        { success: false, error: 'Mülakat bulunamadı' } as ApiResponse,
+        { status: 404 }
+      )
+    }
+
+    console.log('✅ Interview found:', interview.id)
+
+    // ---------- FETCH QUESTIONS ----------
+    const { data: questions, error: questionsError } = await serverSupabase
+      .from('questions')
+      .select('*')
+      .eq('interview_id', interviewId)
+      .order('order_num', { ascending: true })
+
+    if (questionsError) {
+      console.error('❌ Questions fetch error:', questionsError)
+      // Continue without questions
+    }
+
+    console.log('✅ Questions fetched:', questions?. length || 0)
 
     return NextResponse.json({
       success: true,
       data: {
         interview,
-        questions,
+        questions:  questions || [],
       },
     } as ApiResponse)
   } catch (error) {
-    console.error('Get interview error:', error)
+    console.error('💥 Get interview error:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to get interview' } as ApiResponse,
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Mülakat yüklenemedi',
+      } as ApiResponse,
       { status: 500 }
     )
   }
