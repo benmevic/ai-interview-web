@@ -8,7 +8,15 @@ import { ApiResponse, Evaluation } from '@/lib/types'
  */
 export async function POST(request: NextRequest) {
   try {
+    console.log('🧠 Evaluating answer...')
+
     const { questionId, question, answer } = await request.json()
+
+    console.log('📝 Evaluation request:', {
+      questionId,
+      questionLength: question?. length,
+      answerLength: answer?.length,
+    })
 
     if (!question || !answer) {
       return NextResponse.json(
@@ -17,7 +25,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const completion = await openai.chat.completions.create({
+    // ✅ GEÇICI:  Mock evaluation (OpenAI key yoksa)
+    if (!process.env.OPENAI_API_KEY) {
+      console.log('⚠️ Using mock evaluation (no OpenAI key)')
+
+      const mockEvaluation = {
+        score: Math.floor(Math.random() * 3) + 7, // 7-9 arası random
+        feedback: 
+          'Cevabınız genel olarak iyiydi.  Daha spesifik örnekler vererek cevabınızı güçlendirebilirsiniz.',
+        strengths: [
+          'Konuya hakim olduğunuz anlaşılıyor',
+          'Net ve anlaşılır ifade ettiniz',
+        ],
+        improvements: [
+          'Daha fazla teknik detay ekleyebilirsiniz',
+          'Gerçek dünya örnekleri ile destekleyebilirsiniz',
+        ],
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          questionId,
+          ... mockEvaluation,
+        },
+      } as ApiResponse)
+    }
+
+    // ✅ GERÇEK OpenAI çağrısı
+    console.log('📡 Calling OpenAI for evaluation...')
+
+    const completion = await openai. chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         {
@@ -26,14 +64,14 @@ export async function POST(request: NextRequest) {
             'You are an expert interviewer evaluating candidate responses. Provide constructive feedback with a score out of 10.',
         },
         {
-          role: 'user',
-          content: `Evaluate this interview answer:
+          role:  'user',
+          content:  `Evaluate this interview answer:
 
 Question: ${question}
 
-Answer: ${answer}
+Answer:  ${answer}
 
-Provide:
+Provide: 
 1. Score (0-10)
 2. Detailed feedback (2-3 sentences)
 3. Strengths (array of 2-3 points)
@@ -46,7 +84,11 @@ Respond in JSON format with keys: score, feedback, strengths, improvements`,
       max_tokens: 500,
     })
 
-    const content = completion.choices[0].message.content || '{}'
+    console.log('✅ OpenAI evaluation received')
+
+    const content = completion. choices[0].message.content || '{}'
+    console.log('📝 Evaluation content:', content)
+
     const evaluation: Evaluation = JSON.parse(content)
 
     return NextResponse.json({
@@ -60,9 +102,14 @@ Respond in JSON format with keys: score, feedback, strengths, improvements`,
       },
     } as ApiResponse)
   } catch (error) {
-    console.error('Answer evaluation error:', error)
+    console.error('💥 Answer evaluation error:', error)
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown')
+
     return NextResponse.json(
-      { success: false, error: 'Failed to evaluate answer' } as ApiResponse,
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to evaluate answer',
+      } as ApiResponse,
       { status: 500 }
     )
   }
