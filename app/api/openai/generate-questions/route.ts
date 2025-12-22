@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import pdf from 'pdf-parse'
+import { openai } from '@/lib/openai'
+import { ApiResponse, Question } from '@/lib/types'
 
-export async function POST(request: NextRequest) {
+/**
+ * Generate interview questions with OpenAI API endpoint
+ */
+export async function POST(request:  NextRequest) {
   try {
     // 🔍 DEBUG: Key var mı kontrol et
     const hasKey = !!process.env.OPENAI_API_KEY
@@ -16,119 +19,121 @@ export async function POST(request: NextRequest) {
 
     const { cvText, position } = await request.json()
 
-export async function POST(request: NextRequest) {
-  try {
-    console.log('🚀 Creating interview')
-
-    // ---------------- AUTH ----------------
-    const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
-
-    if (!token) {
-      return NextResponse.json({ success: false, error: 'No token' }, { status: 401 })
-    }
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 })
-    }
-
-    // ---------------- FORM ----------------
-    const formData = await request.formData()
-    const file = formData.get('cv') as File
-    const title = formData.get('title') as string
-    const position = formData.get('position') as string
-
-    if (!file || !title || !position) {
-      return NextResponse.json({ success: false, error: 'Missing fields' }, { status: 400 })
-    }
-
-    // ---------------- PDF ----------------
-    const buffer = Buffer.from(await file.arrayBuffer())
-    const pdfData = await pdf(buffer)
-    const cvText = pdfData.text
-
-    // ---------------- INTERVIEW INSERT ----------------
-    const { data: interview, error: interviewError } = await supabase
-      .from('interviews')
-      .insert(
-        [
-          {
-            user_id: user.id,
-            title,
-            position,
-            cv_text: cvText,
-            status: 'in_progress',
-          },
-        ] as any
+    if (!cvText || !position) {
+      return NextResponse.json(
+        { success: false, error: 'CV text and position are required' } as ApiResponse,
+        { status: 400 }
       )
-      .select()
-      .single()
-
-    if (interviewError || !interview) {
-      console.error('❌ Interview insert error:', interviewError)
-      return NextResponse.json({ success: false, error: 'Interview insert failed' }, { status: 500 })
     }
 
-    const interviewId = (interview as any).id
-    console.log('✅ Interview created:', interviewId)
-
-    // ---------------- QUESTIONS (FAIL SAFE) ----------------
-    let questions: any[] = []
-
-    try {
-      const res = await fetch(
-        `${request.nextUrl.origin}/api/openai/generate-questions`,
+    // ✅ GEÇICI:  Mock sorular (OpenAI key yoksa)
+    if (!process.env.OPENAI_API_KEY) {
+      console.log('⚠️ Using mock questions (no OpenAI key)')
+      
+      const mockQuestions: Question[] = [
         {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cvText, position }),
-        }
-      )
+          id: 'q-1',
+          interview_id: 'temp-id',
+          question_text: `${position} pozisyonu için en önemli becerileriniz nelerdir?`,
+          order_num: 1,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'q-2',
+          interview_id: 'temp-id',
+          question_text: 'Geçmiş projelerinizde karşılaştığınız en büyük zorluk neydi?',
+          order_num: 2,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'q-3',
+          interview_id: 'temp-id',
+          question_text: 'Neden bu pozisyona başvurdunuz?',
+          order_num: 3,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'q-4',
+          interview_id: 'temp-id',
+          question_text: 'Ekip çalışması konusunda bir deneyiminizi anlatır mısınız?',
+          order_num: 4,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'q-5',
+          interview_id: 'temp-id',
+          question_text: '5 yıl sonra kendinizi nerede görüyorsunuz?',
+          order_num: 5,
+          created_at: new Date().toISOString(),
+        },
+      ]
 
-      const result = await res.json()
-      console.log('🧠 OpenAI response:', result)
-
-      if (res.ok && result?.data?.questions) {
-        questions = result.data.questions
-      }
-    } catch (err) {
-      console.error('⚠️ Question generation failed:', err)
+      return NextResponse. json({
+        success: true,
+        data: { questions: mockQuestions },
+      } as ApiResponse)
     }
 
-    // ---------------- QUESTIONS INSERT ----------------
-    if (questions.length > 0) {
-      const questionsToInsert = questions.map((q: any, i: number) => ({
-        interview_id: interviewId,
-        question_text: q.question_text ?? q,
-        order_num: i + 1,
-      }))
+    // ✅ GERÇEK OpenAI çağrısı
+    console.log('📡 Calling OpenAI API.. .')
 
-      const { error: qErr } = await supabase
-        .from('questions')
-        .insert(questionsToInsert as any)
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages:  [
+        {
+          role:  'system',
+          content: 
+            'You are an expert interviewer.  Generate relevant, insightful interview questions based on the candidate\'s CV and the position they are applying for.',
+        },
+        {
+          role: 'user',
+          content: `Generate 5 interview questions for a ${position} position based on this CV: 
 
-      if (qErr) {
-        console.error('❌ Question insert error:', qErr)
-      }
-    }
+${cvText}
 
-    // ---------------- RESPONSE ----------------
+Requirements:
+- Questions should be specific to their experience and skills
+- Mix of technical and behavioral questions
+- Professional and relevant
+- Each question should be clear and concise
+
+Respond with a JSON array of question strings. `,
+        },
+      ],
+      temperature: 0.8,
+      max_tokens: 800,
+    })
+
+    console.log('✅ OpenAI response received')
+
+    const content = completion.choices[0].message.content || '[]'
+    console.log('📝 Generated content:', content)
+
+    const questionTexts:  string[] = JSON.parse(content)
+
+    const questions: Question[] = questionTexts.map((text, index) => ({
+      id: `q-${index + 1}`,
+      interview_id: 'temp-id',
+      question_text: text,
+      order_num: index + 1,
+      created_at: new Date().toISOString(),
+    }))
+
+    console.log('✅ Questions generated:', questions.length)
+
     return NextResponse.json({
       success: true,
-      data: {
-        interview_id: interviewId,
-        questions_created: questions.length,
-      },
-    })
-  } catch (err) {
-    console.error('💥 Create interview crashed:', err)
+      data:  { questions },
+    } as ApiResponse)
+  } catch (error) {
+    console.error('💥 Question generation error:', error)
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error')
+
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to generate questions',
+      } as ApiResponse,
       { status: 500 }
     )
   }
