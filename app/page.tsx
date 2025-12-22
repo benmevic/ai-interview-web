@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
@@ -18,28 +18,7 @@ export default function Home() {
   const [interviews, setInterviews] = useState<Interview[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
-
-  const checkAuth = async () => {
-    try {
-      const {
-        data: { session },
-      } = await supabase. auth.getSession()
-
-      if (session) {
-        setIsAuthenticated(true)
-        await loadRecentInterviews(session.user.id)
-      }
-    } catch (error) {
-      console.error('Auth check error:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const loadRecentInterviews = async (userId: string) => {
+  const loadRecentInterviews = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('interviews')
@@ -54,7 +33,28 @@ export default function Home() {
     } catch (error) {
       console.error('Load interviews error:', error)
     }
-  }
+  }, [])
+
+  const checkAuth = useCallback(async () => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (session) {
+        setIsAuthenticated(true)
+        await loadRecentInterviews(session.user.id)
+      }
+    } catch (error) {
+      console.error('Auth check error:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [loadRecentInterviews])
+
+  useEffect(() => {
+    checkAuth()
+  }, [checkAuth])
 
   const handleContinueInterview = (id: string) => {
     router.push(`/interview/${id}`)
@@ -71,7 +71,7 @@ export default function Home() {
         data: { session },
       } = await supabase. auth.getSession()
       if (session) {
-        await loadRecentInterviews(session. user.id)
+        await loadRecentInterviews(session.user.id)
       }
     } catch (error) {
       console.error('Delete error:', error)
@@ -90,15 +90,15 @@ export default function Home() {
   return (
     <div className="gradient-bg">
       {/* Hero Section */}
-      <section className="px-4 py-20 sm:px-6 lg: px-8">
+      <section className="px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="text-5xl font-bold tracking-tight text-gray-900 sm:text-6xl">
             AI Destekli
             <span className="block text-primary-600">Mülakat Deneyimi</span>
           </h1>
           <p className="mt-6 text-lg leading-8 text-gray-600">
-            CV'nizi yükleyin, yapay zeka size özel sorular sorsun ve gerçek zamanlı geri bildirim
-            alın. Mülakat becerilerinizi geliştirmenin en akıllı yolu. 
+            CV&apos;nizi yükleyin, yapay zeka size özel sorular sorsun ve gerçek zamanlı geri
+            bildirim alın.  Mülakat becerilerinizi geliştirmenin en akıllı yolu.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
             {isAuthenticated ? (
@@ -127,10 +127,10 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section className="px-4 py-20 sm:px-6 lg: px-8">
+      <section className="px-4 py-20 sm: px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <h2 className="text-center text-3xl font-bold text-gray-900">Nasıl Çalışır?</h2>
-          <div className="mt-12 grid gap-8 sm: grid-cols-2 lg:grid-cols-3">
+          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             <Card variant="gradient">
               <CardContent className="p-8">
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary-600">
@@ -138,7 +138,8 @@ export default function Home() {
                 </div>
                 <h3 className="mt-6 text-xl font-semibold text-gray-900">1. CV Yükleyin</h3>
                 <p className="mt-4 text-gray-600">
-                  PDF formatında CV'nizi yükleyin. Yapay zekamız deneyimlerinizi analiz edecek.
+                  PDF formatında CV&apos;nizi yükleyin. Yapay zekamız deneyimlerinizi analiz
+                  edecek. 
                 </p>
               </CardContent>
             </Card>
@@ -150,7 +151,7 @@ export default function Home() {
                 </div>
                 <h3 className="mt-6 text-xl font-semibold text-gray-900">2. AI Sorular Sorsun</h3>
                 <p className="mt-4 text-gray-600">
-                  CV'nize özel, pozisyona uygun sorular otomatik olarak oluşturulur. 
+                  CV&apos;nize özel, pozisyona uygun sorular otomatik olarak oluşturulur. 
                 </p>
               </CardContent>
             </Card>
@@ -178,7 +179,7 @@ export default function Home() {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {interviews.map((interview) => (
                 <InterviewCard
-                  key={interview. id}
+                  key={interview.id}
                   interview={interview}
                   onContinue={() => handleContinueInterview(interview.id)}
                   onDelete={() => handleDeleteInterview(interview.id)}
