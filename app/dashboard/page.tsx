@@ -19,55 +19,48 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
-  const fetchInterviews = async () => {
-    try {
-      const { data:  { session }, error:  sessionError } = await supabase. auth.getSession()
-      
-      console.  log('🔐 Session:', session)  // ← EKLE
-      console. log('🔐 Session Error:', sessionError)  // ← EKLE
-      
-      if (sessionError || !session) {
-        router.push('/login')
-        return
-      }
+    const fetchInterviews = async () => {
+      try {
+        // Supabase session kontrolü
+        const { data: { session }, error:  sessionError } = await supabase. auth.getSession()
+        
+        if (sessionError || !session) {
+          router. push('/login')
+          return
+        }
 
-      setUser(session.user)
+        setUser(session.user)
 
-      const { data: interviewsData, error: interviewsError } = await supabase
-        .from('interviews')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending:  false })
+        // Gerçek interview'ları DB'den çek
+        const { data: interviewsData, error: interviewsError } = await supabase
+          .from('interviews')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending:  false })
 
-      console.log('📊 Interviews Data:', interviewsData)  // ← EKLE
-      console.log('📊 Interviews Error:', interviewsError)  // ← EKLE
-
-      if (interviewsError) {
-        console.error('Interviews fetch error:', interviewsError)
+        if (interviewsError) {
+          console.error('Interviews fetch error:', interviewsError)
+          setInterviews([])
+        } else {
+          setInterviews(interviewsData || [])
+        }
+      } catch (error) {
+        console.error('Error:', error)
         setInterviews([])
-      } else {
-        setInterviews(interviewsData || [])
+      } finally {
+        setIsLoading(false)
       }
-    } catch (error) {
-      console.error('Error:', error)
-      setInterviews([])
-    } finally {
-      setIsLoading(false)
     }
-  }
-
-  fetchInterviews()
-}, [router])
 
     fetchInterviews()
-  }, [router]) // ← useEffect burada kapanıyor! 
+  }, [router])
 
   const completedInterviews = interviews.filter((i) => i.status === 'completed')
   const averageScore =
-    completedInterviews. length > 0
+    completedInterviews.length > 0
       ? Math.round(
           completedInterviews.reduce((sum, i) => sum + (i.score || 0), 0) /
-            completedInterviews.length
+            completedInterviews. length
         )
       : 0
 
@@ -88,13 +81,13 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
-            Tekrar hoş geldiniz{user?.email ? `, ${user.email.split('@')[0]}` : ''}!
+            Tekrar hoş geldiniz{user?.email ?  `, ${user.email. split('@')[0]}` : ''}! 
           </h1>
           <p className="mt-2 text-gray-600">Mülakat ilerlemenizi takip edin ve yeni pratik oturumları başlatın</p>
         </div>
 
         {/* Stats */}
-        <div className="mb-8 grid gap-6 md: grid-cols-3">
+        <div className="mb-8 grid gap-6 md:grid-cols-3">
           <div className="rounded-xl bg-white p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
@@ -145,9 +138,9 @@ export default function DashboardPage() {
         {/* Interview History */}
         <div>
           <h2 className="mb-6 text-2xl font-bold text-gray-900">Son Mülakatlar</h2>
-          {interviews.length === 0 ? (
+          {interviews.length === 0 ?  (
             <div className="rounded-xl bg-white p-12 text-center shadow-lg">
-              <p className="text-gray-600">Henüz mülakat yok. İlk pratik oturumunuzu başlatın!</p>
+              <p className="text-gray-600">Henüz mülakat yok.  İlk pratik oturumunuzu başlatın!</p>
               <Link href="/interview/new">
                 <Button className="mt-4">
                   <Plus className="mr-2 h-5 w-5" />
