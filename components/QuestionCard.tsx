@@ -37,7 +37,7 @@ export default function QuestionCard({
         <div className="flex items-start justify-between">
           <CardTitle className="flex items-center">
             <MessageCircle className="mr-2 h-5 w-5 text-primary-600" />
-            Soru {question.order}
+            Soru {question.order_num}
           </CardTitle>
           {isAnswered && (
             <CheckCircle className="h-5 w-5 text-green-600" />
