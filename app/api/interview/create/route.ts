@@ -1,47 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { supabase } from '@/lib/supabase'
 import { ApiResponse } from '@/lib/types'
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const { title, position, cvText } = await request.json()
 
-    // -----------------------------
-    // AUTH
-    // -----------------------------
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
+    if (!title || !position || !cvText) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' } as ApiResponse,
-        { status: 401 }
-      )
-    }
-
-    // -----------------------------
-    // BODY
-    // -----------------------------
-    const { title, position, questions } = await req.json()
-
-    if (!title || !position || !questions?.length) {
-      return NextResponse.json(
-        { success: false, error: 'Eksik veri' } as ApiResponse,
+        { success: false, error: 'Eksik alanlar var' } as ApiResponse,
         { status: 400 }
       )
     }
 
-    // -----------------------------
-    // CREATE INTERVIEW
-    // -----------------------------
+    // 🔐 Auth user al
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: 'Yetkisiz' } as ApiResponse,
+        { status: 401 }
+      )
+    }
+
+    // 🧠 Interview oluştur
     const { data: interview, error: interviewError } = await supabase
       .from('interviews')
       .insert({
         user_id: user.id,
         title,
         position,
+        cv_text: cvText,
+        status: 'pending',
       })
       .select()
       .single()
@@ -51,30 +44,12 @@ export async function POST(req: NextRequest) {
       throw interviewError
     }
 
-    // -----------------------------
-    // INSERT QUESTIONS
-    // -----------------------------
-    const questionRows = questions.map((q: any) => ({
-      interview_id: interview.id,
-      question_text: q.question_text,
-      order_num: q.order, // 🔥 KRİTİK SATIR
-    }))
-
-    const { error: questionsError } = await supabase
-      .from('questions')
-      .insert(questionRows)
-
-    if (questionsError) {
-      console.error('❌ Question insert error:', questionsError)
-      throw questionsError
-    }
-
     return NextResponse.json(
       {
         success: true,
-        data: { interviewId: interview.id },
+        data: { interview },
       } as ApiResponse,
-      { status: 201 }
+      { status: 200 }
     )
   } catch (error) {
     console.error('💥 Interview create error:', error)
