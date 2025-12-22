@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { LogIn } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 /**
  * Login page with email/password authentication
@@ -26,30 +27,29 @@ export default function LoginPage() {
     console.log('🚀 Login started for:', email)
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method:  'POST',
-        headers:  { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      // ✅ Direkt Supabase kullan (API route değil)
+      const { data, error:  signInError } = await supabase. auth.signInWithPassword({
+        email,
+        password,
       })
 
-      console.log('📥 Response status:', response.status)
+      console.log('📥 Supabase response:', { data, error: signInError })
 
-      const data = await response.json()
-
-      console.log('📥 Response data:', data)
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Giriş başarısız')
+      if (signInError) {
+        throw new Error(signInError. message || 'Giriş başarısız')
       }
 
-      console.log('✅ Login successful, redirecting to dashboard...')
+      if (! data.session) {
+        throw new Error('Oturum oluşturulamadı')
+      }
 
-      // Direkt yönlendir (Supabase session cookie'de saklanıyor)
-      router.push('/dashboard')
+      console.log('✅ Login successful, session set!')
+
+      // Direkt yönlendir
+      window.location.href = '/dashboard'
     } catch (err) {
       console.error('❌ Login error:', err)
       setError(err instanceof Error ? err.message :  'Bir hata oluştu')
-    } finally {
       setIsLoading(false)
     }
   }
