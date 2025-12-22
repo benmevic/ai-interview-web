@@ -3,27 +3,11 @@ import { ApiResponse } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 import pdf from 'pdf-parse'
 
-/* =======================
-   TYPES
-======================= */
-type Interview = {
-  id: string
-  user_id: string
-  title: string
-  position: string
-  cv_text: string
-  status: string
-  created_at: string
-}
-
-/**
- * Create new interview API endpoint
- */
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 Create interview started')
-
-    // Token kontrolü
+    // --------------------
+    // AUTH
+    // --------------------
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
 
@@ -34,7 +18,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // User doğrulama
     const {
       data: { user },
       error: authError,
@@ -47,7 +30,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Form data al
+    // --------------------
+    // FORM DATA
+    // --------------------
     const formData = await request.formData()
     const file = formData.get('cv') as File
     const title = formData.get('title') as string
@@ -60,12 +45,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // PDF parse
+    // --------------------
+    // PDF PARSE
+    // --------------------
     const buffer = Buffer.from(await file.arrayBuffer())
     const pdfData = await pdf(buffer)
     const cvText = pdfData.text
 
-    // OpenAI ile soru üret
+    // --------------------
+    // QUESTION GENERATION
+    // --------------------
     const questionsResponse = await fetch(
       `${request.nextUrl.origin}/api/openai/generate-questions`,
       {
@@ -81,33 +70,37 @@ export async function POST(request: NextRequest) {
 
     const { data: questionsData } = await questionsResponse.json()
 
-    /* =======================
-       INTERVIEW INSERT (FIX)
-    ======================= */
-    const { data: interview, error: interviewError } = await supabase
+    // --------------------
+    // INTERVIEW INSERT (FIXED)
+    // --------------------
+    const { data: interviewData, error: interviewError } = await supabase
       .from('interviews')
-      .insert({
-        user_id: user.id,
-        title,
-        position,
-        cv_text: cvText,
-        status: 'in_progress',
-      })
-      .select('*')
-      .single<Interview>()
+      .insert(
+        [
+          {
+            user_id: user.id,
+            title,
+            position,
+            cv_text: cvText,
+            status: 'in_progress',
+          },
+        ] as any
+      )
+      .select()
+      .single()
 
-    if (interviewError || !interview) {
+    if (interviewError || !interviewData) {
       throw new Error('Interview kaydedilemedi')
     }
 
-    console.log('✅ Interview saved, ID:', interview.id)
+    const interviewId = (interviewData as any).id
 
-    /* =======================
-       QUESTIONS INSERT
-    ======================= */
+    // --------------------
+    // QUESTIONS INSERT
+    // --------------------
     const questionsToInsert = questionsData.questions.map(
       (q: any, index: number) => ({
-        interview_id: interview.id,
+        interview_id: interviewId,
         question_text: q.text || q.question_text || q,
         order_num: index + 1,
       })
@@ -115,22 +108,28 @@ export async function POST(request: NextRequest) {
 
     const { error: questionsError } = await supabase
       .from('questions')
-      .insert(questionsToInsert)
+      .insert(questionsToInsert as any)
 
     if (questionsError) {
-      await supabase.from('interviews').delete().eq('id', interview.id)
+      await supabase.from('interviews').delete().eq('id', interviewId)
       throw new Error('Sorular kaydedilemedi')
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        id: interview.id,
-        interview,
-      },
-    } as ApiResponse)
+    // --------------------
+    // RESPONSE
+    // --------------------
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          id: interviewId,
+          interview: interviewData,
+        },
+      } as ApiResponse,
+      { status: 200 }
+    )
   } catch (error) {
-    console.error('💥 Create interview error:', error)
+    console.error('Create interview error:', error)
     return NextResponse.json(
       {
         success: false,
