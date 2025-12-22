@@ -16,8 +16,8 @@ export async function POST(request: NextRequest) {
   } catch (parseError) {
     console.error('❌ Request body parse error:', parseError)
     return NextResponse.json(
-      { success: false, error:  'Invalid request body' } as ApiResponse,
-      { status:  400 }
+      { success: false, error: 'Invalid request body' } as ApiResponse,
+      { status: 400 }
     )
   }
 
@@ -26,12 +26,12 @@ export async function POST(request: NextRequest) {
 
     if (!question || !answer) {
       return NextResponse.json(
-        { success: false, error:  'Question and answer are required' } as ApiResponse,
+        { success: false, error: 'Question and answer are required' } as ApiResponse,
         { status: 400 }
       )
     }
 
-    const useMock = !process.env. OPENAI_API_KEY
+    const useMock = ! process.env.OPENAI_API_KEY
 
     let evaluationResult: {
       score: number
@@ -43,27 +43,83 @@ export async function POST(request: NextRequest) {
     if (useMock) {
       console.log('⚠️ Using mock evaluation')
 
-      const answerLength = answer.split(' ').length
-      let score = 7
-      if (answerLength > 50) score = 9
-      else if (answerLength > 30) score = 8
-      else if (answerLength < 10) score = 5
+      // ✅ AKILLI MOCK PUANLAMA
+      const answerLength = answer.trim().length
+      const wordCount = answer.trim().split(/\s+/).length
+
+      let score = 5 // varsayılan
+
+      // Çok kısa cevaplar
+      if (answerLength < 20 || wordCount < 5) {
+        score = 3
+      }
+      // Kısa cevaplar
+      else if (wordCount < 15) {
+        score = 5
+      }
+      // Orta cevaplar
+      else if (wordCount < 30) {
+        score = 6
+      }
+      // İyi cevaplar
+      else if (wordCount < 50) {
+        score = 7
+      }
+      // Detaylı cevaplar
+      else if (wordCount < 80) {
+        score = 8
+      }
+      // Çok detaylı cevaplar
+      else {
+        score = 9
+      }
+
+      // Rastgele ±1 varyasyon ekle
+      score = Math.max(1, Math.min(10, score + Math.floor(Math.random() * 3) - 1))
+
+      console.log(`📊 Mock score: ${score}/10 (${wordCount} words, ${answerLength} chars)`)
 
       evaluationResult = {
         score,
-        feedback: 'Cevabınız genel olarak iyiydi.  Daha spesifik örnekler vererek güçlendirebilirsiniz.',
-        strengths: ['Konuya hakim olduğunuz anlaşılıyor', 'Net ifade kullandınız'],
-        improvements: ['Daha fazla teknik detay ekleyin', 'Gerçek örneklerle destekleyin'],
+        feedback: 
+          score >= 8
+            ? 'Mükemmel bir cevap! Konuya hakimiyetiniz ve detaylı açıklamalarınız çok iyi.'
+            : score >= 6
+            ? 'Cevabınız genel olarak iyiydi. Daha spesifik örnekler vererek güçlendirebilirsiniz.'
+            :  score >= 4
+            ? 'Soruyu anladınız fakat daha detaylı ve yapılandırılmış bir cevap verebilirdiniz.'
+            : 'Cevabınız çok kısa kaldı. Lütfen daha detaylı ve örneklerle desteklenmiş cevaplar verin.',
+        strengths: 
+          score >= 7
+            ? [
+                'Konuya hakim olduğunuz anlaşılıyor',
+                'Detaylı ve net açıklama yaptınız',
+                'İyi yapılandırılmış cevap',
+              ]
+            : score >= 5
+            ? ['Soruyu doğru anladınız', 'Net ifade kullandınız']
+            : ['Temel konuyu kavradınız'],
+        improvements: 
+          score >= 7
+            ? ['Daha fazla gerçek dünya örneği ekleyebilirsiniz']
+            : score >= 5
+            ? ['Daha fazla teknik detay ekleyin', 'Gerçek örneklerle destekleyin']
+            : [
+                'Çok daha detaylı cevap verin',
+                'Örneklerle destekleyin',
+                'Cevabınızı yapılandırın',
+              ],
       }
     } else {
-      console.log('📡 Calling OpenAI for evaluation...')
+      console.log('📡 Calling OpenAI for evaluation.. .')
 
       const completion = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
-        messages: [
+        messages:  [
           {
-            role: 'system',
-            content: 'You are an expert interviewer.  Provide constructive feedback with a score out of 10.',
+            role:  'system',
+            content: 
+              'You are an expert interviewer.  Provide constructive feedback with a score out of 10.',
           },
           {
             role: 'user',
@@ -86,7 +142,7 @@ Respond in JSON format with keys: score, feedback, strengths, improvements`,
         max_tokens: 500,
       })
 
-      const content = completion.choices[0].message. content || '{}'
+      const content = completion.choices[0].message.content || '{}'
       evaluationResult = JSON.parse(content)
       console.log('✅ OpenAI evaluation received')
     }
@@ -95,10 +151,10 @@ Respond in JSON format with keys: score, feedback, strengths, improvements`,
     try {
       const serverSupabase = getServerSupabase()
 
-      const { error: updateError } = await serverSupabase
+      const { error:  updateError } = await serverSupabase
         .from('questions')
         .update({
-          answer_text:  answer,
+          answer_text: answer,
           score: evaluationResult.score,
           feedback: evaluationResult.feedback,
         })
@@ -124,11 +180,18 @@ Respond in JSON format with keys: score, feedback, strengths, improvements`,
     console.error('💥 Evaluation error:', error)
 
     // Fallback mock
-    const answerLength = answer. split(' ').length
-    let score = 7
-    if (answerLength > 50) score = 9
-    else if (answerLength > 30) score = 8
-    else if (answerLength < 10) score = 5
+    const answerLength = answer.trim().length
+    const wordCount = answer.trim().split(/\s+/).length
+
+    let score = 5
+    if (answerLength < 20 || wordCount < 5) score = 3
+    else if (wordCount < 15) score = 5
+    else if (wordCount < 30) score = 6
+    else if (wordCount < 50) score = 7
+    else if (wordCount < 80) score = 8
+    else score = 9
+
+    score = Math.max(1, Math.min(10, score + Math.floor(Math.random() * 3) - 1))
 
     return NextResponse.json({
       success: true,
