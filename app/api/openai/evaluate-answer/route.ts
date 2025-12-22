@@ -7,12 +7,14 @@ export async function POST(request: NextRequest) {
   let questionId = ''
   let question = ''
   let answer = ''
+  let interviewId = ''
 
   try {
     const body = await request.json()
     questionId = body.questionId
     question = body.question
     answer = body.answer
+    interviewId = body.interviewId // ← Ekle
   } catch (parseError) {
     console.error('❌ Request body parse error:', parseError)
     return NextResponse.json(
@@ -47,34 +49,22 @@ export async function POST(request: NextRequest) {
       const answerLength = answer.trim().length
       const wordCount = answer.trim().split(/\s+/).length
 
-      let score = 5 // varsayılan
+      let score = 5
 
-      // Çok kısa cevaplar
       if (answerLength < 20 || wordCount < 5) {
         score = 3
-      }
-      // Kısa cevaplar
-      else if (wordCount < 15) {
+      } else if (wordCount < 15) {
         score = 5
-      }
-      // Orta cevaplar
-      else if (wordCount < 30) {
+      } else if (wordCount < 30) {
         score = 6
-      }
-      // İyi cevaplar
-      else if (wordCount < 50) {
+      } else if (wordCount < 50) {
         score = 7
-      }
-      // Detaylı cevaplar
-      else if (wordCount < 80) {
+      } else if (wordCount < 80) {
         score = 8
-      }
-      // Çok detaylı cevaplar
-      else {
+      } else {
         score = 9
       }
 
-      // Rastgele ±1 varyasyon ekle
       score = Math.max(1, Math.min(10, score + Math.floor(Math.random() * 3) - 1))
 
       console.log(`📊 Mock score: ${score}/10 (${wordCount} words, ${answerLength} chars)`)
@@ -83,7 +73,7 @@ export async function POST(request: NextRequest) {
         score,
         feedback: 
           score >= 8
-            ? 'Mükemmel bir cevap! Konuya hakimiyetiniz ve detaylı açıklamalarınız çok iyi.'
+            ? 'Mükemmel bir cevap!  Konuya hakimiyetiniz ve detaylı açıklamalarınız çok iyi.'
             : score >= 6
             ? 'Cevabınız genel olarak iyiydi. Daha spesifik örnekler vererek güçlendirebilirsiniz.'
             :  score >= 4
@@ -148,25 +138,62 @@ Respond in JSON format with keys: score, feedback, strengths, improvements`,
     }
 
     // ✅ SUPABASE'E KAYDET
-    try {
-      const serverSupabase = getServerSupabase()
+    const serverSupabase = getServerSupabase()
 
-      const { error:  updateError } = await serverSupabase
-        .from('questions')
-        .update({
-          answer_text: answer,
-          score: evaluationResult.score,
-          feedback: evaluationResult.feedback,
-        })
-        .eq('id', questionId)
+    const { error:  updateError } = await serverSupabase
+      .from('questions')
+      .update({
+        answer_text: answer,
+        score: evaluationResult.score,
+        feedback: evaluationResult.feedback,
+      })
+      .eq('id', questionId)
 
-      if (updateError) {
-        console.error('❌ Question update error:', updateError)
-      } else {
-        console.log('✅ Answer saved to database')
+    if (updateError) {
+      console.error('❌ Question update error:', updateError)
+    } else {
+      console.log('✅ Answer saved to database')
+    }
+
+    // ✅ TÜM SORULAR CEVAPLANDI MI KONTROL ET
+    if (interviewId) {
+      try {
+        const { data: allQuestions } = await serverSupabase
+          .from('questions')
+          .select('id, answer_text, score')
+          .eq('interview_id', interviewId)
+
+        if (allQuestions) {
+          const allAnswered = allQuestions.every((q) => q.answer_text && q.score !== undefined)
+
+          if (allAnswered) {
+            console.log('🏁 All questions answered, completing interview.. .')
+
+            const totalScore = allQuestions.reduce((sum, q) => sum + (q.score || 0), 0)
+            const averageScore = Math.round((totalScore / allQuestions.length) * 10)
+
+            console.log(`📊 Final score: ${averageScore}%`)
+
+            // Interview'i tamamla
+            const { error: completeError } = await serverSupabase
+              .from('interviews')
+              .update({
+                status: 'completed',
+                score: averageScore,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', interviewId)
+
+            if (completeError) {
+              console. error('❌ Interview completion error:', completeError)
+            } else {
+              console.log('✅ Interview completed successfully!')
+            }
+          }
+        }
+      } catch (completeError) {
+        console.error('⚠️ Interview completion check failed:', completeError)
       }
-    } catch (dbError) {
-      console.error('⚠️ Database save failed:', dbError)
     }
 
     return NextResponse.json({
@@ -179,9 +206,8 @@ Respond in JSON format with keys: score, feedback, strengths, improvements`,
   } catch (error) {
     console.error('💥 Evaluation error:', error)
 
-    // Fallback mock
     const answerLength = answer.trim().length
-    const wordCount = answer.trim().split(/\s+/).length
+    const wordCount = answer. trim().split(/\s+/).length
 
     let score = 5
     if (answerLength < 20 || wordCount < 5) score = 3
