@@ -19,55 +19,44 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
-    // Check authentication
-    const session = localStorage.getItem('user_session')
-    if (!session) {
-      router.push('/login')
-      return
+    const fetchInterviews = async () => {
+      try {
+        // Supabase session kontrolü
+        const { data: { session }, error:  sessionError } = await supabase. auth.getSession()
+        
+        if (sessionError || !session) {
+          router.push('/login')
+          return
+        }
+
+        setUser(session.user)
+
+        // Gerçek interview'ları çek
+        const { data: interviewsData, error: interviewsError } = await supabase
+          .from('interviews')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .order('created_at', { ascending:  false })
+
+        if (interviewsError) {
+          console.error('Interviews fetch error:', interviewsError)
+          setInterviews([])
+        } else {
+          setInterviews(interviewsData || [])
+        }
+      } catch (error) {
+        console.error('Error:', error)
+      } finally {
+        setIsLoading(false)
+      }
     }
 
-    const userData = JSON.parse(session)
-    setUser(userData)
-
-    // Fetch interviews (mock data for now)
-   // ✅ YENİ KOD
-const fetchInterviews = async () => {
-  try {
-    // Supabase session kontrolü
-    const { data: { session }, error:  sessionError } = await supabase. auth.getSession()
-    
-    if (sessionError || !session) {
-      router.push('/login')
-      return
-    }
-
-    setUser(session.user)
-
-    // Gerçek interview'ları çek
-    const { data: interviewsData, error: interviewsError } = await supabase
-      .from('interviews')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending:  false })
-
-    if (interviewsError) {
-      console.error('Interviews fetch error:', interviewsError)
-      setInterviews([])
-    } else {
-      setInterviews(interviewsData || [])
-    }
-  } catch (error) {
-    console.error('Error:', error)
-  } finally {
-    setIsLoading(false)
-  }
-}
-
-fetchInterviews()
+    fetchInterviews()
+  }, [router]) // ← useEffect burada kapanıyor! 
 
   const completedInterviews = interviews.filter((i) => i.status === 'completed')
   const averageScore =
-    completedInterviews.length > 0
+    completedInterviews. length > 0
       ? Math.round(
           completedInterviews.reduce((sum, i) => sum + (i.score || 0), 0) /
             completedInterviews.length
@@ -87,7 +76,7 @@ fetchInterviews()
 
   return (
     <div className="gradient-bg min-h-[calc(100vh-4rem)] py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg: px-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
@@ -97,7 +86,7 @@ fetchInterviews()
         </div>
 
         {/* Stats */}
-        <div className="mb-8 grid gap-6 md:grid-cols-3">
+        <div className="mb-8 grid gap-6 md: grid-cols-3">
           <div className="rounded-xl bg-white p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
@@ -114,7 +103,7 @@ fetchInterviews()
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Tamamlanan</p>
-                <p className="mt-1 text-3xl font-bold text-gray-900">{completedInterviews.length}</p>
+                <p className="mt-1 text-3xl font-bold text-gray-900">{completedInterviews. length}</p>
               </div>
               <div className="rounded-full bg-green-100 p-3">
                 <TrendingUp className="h-6 w-6 text-green-600" />
