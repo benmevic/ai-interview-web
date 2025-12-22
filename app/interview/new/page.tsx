@@ -97,7 +97,7 @@ export default function NewInterviewPage() {
               <CardTitle className="text-2xl">Yeni Mülakat Başlat</CardTitle>
             </div>
             <p className="mt-2 text-sm text-gray-600">
-              CV'nizi yükleyin ve kişiselleştirilmiş mülakat sorularınızı alın
+              CV nizi yükleyin ve kişiselleştirilmiş mülakat sorularınızı alın
             </p>
           </CardHeader>
 
