@@ -4,16 +4,20 @@ import { getServerSupabase } from '@/lib/supabase-server'
 import { ApiResponse, Evaluation } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
-  // ✅ DEBUG: KEY VAR MI? 
-  console.log('🔑 OPENAI_API_KEY exists:', !!process.env. OPENAI_API_KEY)
-  console.log('🔑 OPENAI_API_KEY length:', process.env.OPENAI_API_KEY?.length)
-  console.log('🔑 OPENAI_API_KEY prefix:', process.env.OPENAI_API_KEY?.substring(0, 20))
+  // ✅ 1. ÖNCE KEY VAR MI BAK
+  const openaiKey = process.env. OPENAI_API_KEY
+  
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+  console.log('🔑 OPENAI KEY CHECK:')
+  console.log('  - Exists:', !!openaiKey)
+  console.log('  - Length:', openaiKey?.length || 0)
+  console.log('  - Starts with sk-:', openaiKey?.startsWith('sk-'))
+  console.log('  - First 25 chars:', openaiKey?.substring(0, 25))
+  console.log('  - Will use MOCK? ', ! openaiKey)
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   
   let questionId = ''
-  let question = ''
-  let answer = ''
-  let interviewId = ''
-  // ... devamı
+  // ... devam eder
 
   try {
     const body = await request.json()
