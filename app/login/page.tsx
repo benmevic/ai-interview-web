@@ -18,34 +18,41 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React. FormEvent) => {
-  e.preventDefault()
-  setError('')
-  setIsLoading(true)
+  const handleSubmit = async (e:  React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setIsLoading(true)
 
-  try {
-    const response = await fetch('/api/auth/login', {
-      method:  'POST',
-      headers:  { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    })
+    console.log('🚀 Login started for:', email)
 
-    const data = await response.json()
+    try {
+      const response = await fetch('/api/auth/login', {
+        method:  'POST',
+        headers:  { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
 
-    if (! response.ok) {
-      throw new Error(data.error || 'Login failed')
+      console.log('📥 Response status:', response.status)
+
+      const data = await response.json()
+
+      console.log('📥 Response data:', data)
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Giriş başarısız')
+      }
+
+      console.log('✅ Login successful, redirecting to dashboard...')
+
+      // Direkt yönlendir (Supabase session cookie'de saklanıyor)
+      router.push('/dashboard')
+    } catch (err) {
+      console.error('❌ Login error:', err)
+      setError(err instanceof Error ? err.message :  'Bir hata oluştu')
+    } finally {
+      setIsLoading(false)
     }
-
-    // ❌ KALDIR: localStorage. setItem('user_session', JSON.stringify(data.data))
-    
-    // ✅ Direkt yönlendir (Supabase session otomatik set ediyor)
-    router.push('/dashboard')
-  } catch (err) {
-    setError(err instanceof Error ? err.message : 'An error occurred')
-  } finally {
-    setIsLoading(false)
   }
-}
 
   return (
     <div className="gradient-bg flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-12">
@@ -75,7 +82,7 @@ export default function LoginPage() {
                 type="password"
                 placeholder="••••••••"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target. value)}
                 required
               />
 
@@ -96,7 +103,7 @@ export default function LoginPage() {
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                Hesabınız yok mu?{' '}
+                Hesabınız yok mu? {' '}
                 <Link href="/register" className="font-medium text-primary-600 hover:text-primary-700">
                   Kayıt Ol
                 </Link>
