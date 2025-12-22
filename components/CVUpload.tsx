@@ -1,109 +1,82 @@
-'use client'
-
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Card, CardContent } from '@/components/ui/Card'
+import { Upload, File, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Upload, FileText, X } from 'lucide-react'
 
 interface CVUploadProps {
-  onFileUpload: (file: File) => void
+  onFileSelect: (file: File | null) => void  // ← Bunu ekle/düzelt
 }
 
 /**
  * CV upload component with drag & drop
  */
-export default function CVUpload({ onFileUpload }: CVUploadProps) {
+export default function CVUpload({ onFileSelect }: CVUploadProps) {
   const [file, setFile] = useState<File | null>(null)
-  const [error, setError] = useState<string>('')
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setError('')
-    
-    if (acceptedFiles.length === 0) {
-      setError('Lütfen bir PDF dosyası yükleyin')
-      return
-    }
-
-    const uploadedFile = acceptedFiles[0]
-    
-    if (uploadedFile.type !== 'application/pdf') {
-      setError('Sadece PDF dosyaları kabul edilir')
-      return
-    }
-
-    if (uploadedFile.size > 5 * 1024 * 1024) {
-      setError('Dosya boyutu 5MB\'dan küçük olmalıdır')
-      return
-    }
-
-    setFile(uploadedFile)
-  }, [])
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length > 0) {
+        const selectedFile = acceptedFiles[0]
+        setFile(selectedFile)
+        onFileSelect(selectedFile)
+      }
+    },
+    [onFileSelect]
+  )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
+    accept:  {
       'application/pdf': ['.pdf'],
     },
     maxFiles: 1,
   })
 
-  const handleSubmit = () => {
-    if (file) {
-      onFileUpload(file)
-    }
-  }
-
-  const handleRemove = () => {
+  const removeFile = () => {
     setFile(null)
-    setError('')
+    onFileSelect(null)
   }
 
   return (
     <div className="space-y-4">
-      {!file ? (
+      {! file ? (
         <div
           {...getRootProps()}
-          className={`cursor-pointer rounded-xl border-2 border-dashed p-12 text-center transition-colors ${
+          className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
             isDragActive
-              ? 'border-primary-500 bg-primary-50'
+              ? 'border-primary-600 bg-primary-50'
               : 'border-gray-300 hover:border-primary-400'
           }`}
         >
           <input {...getInputProps()} />
           <Upload className="mx-auto h-12 w-12 text-gray-400" />
-          <p className="mt-4 text-lg font-medium text-gray-700">
-            {isDragActive ? 'CV\'nizi buraya bırakın' : 'CV\'nizi buraya sürükleyin'}
+          <p className="mt-4 text-sm text-gray-600">
+            {isDragActive
+              ? 'Dosyayı buraya bırakın.. .'
+              : 'CVnizi buraya sürükleyin veya seçmek için tıklayın'}
           </p>
-          <p className="mt-2 text-sm text-gray-500">veya göz atmak için tıklayın</p>
-          <p className="mt-2 text-xs text-gray-400">Sadece PDF, maksimum 5MB</p>
+          <p className="mt-2 text-xs text-gray-500">Sadece PDF dosyaları</p>
         </div>
       ) : (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <FileText className="h-10 w-10 text-primary-600" />
-                <div>
-                  <p className="font-medium text-gray-900">{file.name}</p>
-                  <p className="text-sm text-gray-500">
-                    {(file.size / 1024).toFixed(2)} KB
-                  </p>
-                </div>
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleRemove}>
-                <X className="h-5 w-5" />
-              </Button>
+        <div className="flex items-center justify-between rounded-lg border border-gray-300 bg-gray-50 p-4">
+          <div className="flex items-center gap-3">
+            <File className="h-8 w-8 text-primary-600" />
+            <div>
+              <p className="text-sm font-medium text-gray-900">{file.name}</p>
+              <p className="text-xs text-gray-500">
+                {(file. size / 1024 / 1024).toFixed(2)} MB
+              </p>
             </div>
-            <Button onClick={handleSubmit} className="mt-4 w-full">
-              Yükle ve Devam Et
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {error && (
-        <p className="text-sm text-red-600">{error}</p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={removeFile}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       )}
     </div>
   )
