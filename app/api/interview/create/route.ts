@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getServerSupabase } from '@/lib/supabase-server'  // ← YENİ IMPORT
 import { ApiResponse } from '@/lib/types'
 import pdf from 'pdf-parse'
 
@@ -7,7 +8,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🚀 Interview create started')
 
-    // ---------- AUTH ----------
+    // ---------- AUTH (Client Supabase) ----------
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
 
@@ -18,9 +19,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ✅ User doğrulama için CLIENT supabase
     const {
       data: { user },
-      error: authError,
+      error:  authError,
     } = await supabase.auth.getUser(token)
 
     if (authError || !user) {
@@ -37,7 +39,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const file = formData.get('cv') as File
     const title = formData.get('title') as string
-    const position = formData. get('position') as string
+    const position = formData.get('position') as string
 
     if (!file || !title || !position) {
       return NextResponse.json(
@@ -56,9 +58,13 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ PDF parsed, text length:', cvText.length)
 
-    // ---------- INTERVIEW INSERT ----------
+    // ---------- INTERVIEW INSERT (Service Role) ----------
     console.log('💾 Inserting interview...')
-    const { data: interview, error: interviewError } = await supabase
+    
+    // ✅ DB işlemleri için SERVER supabase (RLS bypass)
+    const serverSupabase = getServerSupabase()
+
+    const { data: interview, error:  interviewError } = await serverSupabase
       .from('interviews')
       .insert({
         user_id: user.id,
@@ -66,7 +72,7 @@ export async function POST(request: NextRequest) {
         position,
         cv_text: cvText,
         status: 'in_progress',
-      } as any)
+      })
       .select()
       .single()
 
@@ -88,7 +94,7 @@ export async function POST(request: NextRequest) {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON. stringify({ cvText, position }),
+          body: JSON.stringify({ cvText, position }),
         }
       )
 
@@ -99,29 +105,27 @@ export async function POST(request: NextRequest) {
         questions = questionsResult.data.questions
         console.log('✅ Questions generated:', questions.length)
       } else {
-        console.warn('⚠️ Question generation failed, using empty array')
+        console. warn('⚠️ Question generation failed, using empty array')
       }
     } catch (err) {
       console.error('⚠️ Question generation error:', err)
-      // Continue without questions
     }
 
-    // ---------- INSERT QUESTIONS ----------
+    // ---------- INSERT QUESTIONS (Service Role) ----------
     if (questions.length > 0) {
       console.log('💾 Inserting questions.. .')
-      const questionsToInsert = questions.map((q:  any, index: number) => ({
+      const questionsToInsert = questions.map((q: any, index: number) => ({
         interview_id: interviewId,
         question_text: q.question_text || q.text || String(q),
         order_num: index + 1,
       }))
 
-      const { error:  questionsError } = await supabase
+      const { error: questionsError } = await serverSupabase
         .from('questions')
-        .insert(questionsToInsert as any)
+        .insert(questionsToInsert)
 
       if (questionsError) {
         console.error('❌ Questions insert error:', questionsError)
-        // Don't fail the whole request, just log
       } else {
         console.log('✅ Questions inserted:', questions.length)
       }
