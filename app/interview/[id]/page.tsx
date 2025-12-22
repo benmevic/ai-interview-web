@@ -23,26 +23,48 @@ export default function InterviewPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    const loadInterview = async () => {
-      try {
-        // ✅ Supabase session kontrolü
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+ useEffect(() => {
+  const loadInterview = async () => {
+    try {
+      // ✅ Supabase session kontrolü
+      const { data: { session }, error:  sessionError } = await supabase. auth.getSession()
 
-        if (sessionError || !session) {
-          console.error('❌ No session, redirecting to login')
-          router.push('/login')
-          return
-        }
+      if (sessionError || !session) {
+        console.error('❌ No session, redirecting to login')
+        router.push('/login')
+        return
+      }
 
-        console.log('✅ Session OK, fetching interview:', interviewId)
+      console.log('✅ Session OK, fetching interview:', interviewId)
 
-        // ✅ Interview ve questions çek
-        const response = await fetch(`/api/interview/${interviewId}`, {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-        })
+      // ✅ Interview ve questions çek
+      const response = await fetch(`/api/interview/${interviewId}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      })
+
+      const data = await response.json()
+
+      if (! response.ok) {
+        console.error('❌ Interview fetch error:', data.error)
+        throw new Error(data.error || 'Mülakat yüklenemedi')
+      }
+
+      console.log('✅ Interview loaded:', data. data)
+
+      setInterview(data.data. interview)
+      setQuestions(data.data.questions || [])
+    } catch (err) {
+      console.error('💥 Load interview error:', err)
+      setError(err instanceof Error ? err.message :  'Bir hata oluştu')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  loadInterview()
+}, [router, interviewId])
 
         const data = await response.json()
 
