@@ -1,77 +1,105 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { Briefcase, LogOut } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { LogOut } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 /**
- * Navigation bar component with authentication state
+ * Navigation bar component
  */
 export default function Navbar() {
+  const router = useRouter()
   const pathname = usePathname()
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
-    // Check if user is logged in (check localStorage for session)
-    const session = localStorage.getItem('user_session')
-    setIsLoggedIn(!!session)
+    // Session kontrolü
+    const checkSession = async () => {
+      const { data: { session } } = await supabase. auth.getSession()
+      setUser(session?. user || null)
+    }
+
+    checkSession()
+
+    // Auth state değişikliklerini dinle
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null)
+    })
+
+    return () => subscription. unsubscribe()
   }, [])
 
-  const handleLogout = () => {
-    localStorage.removeItem('user_session')
-    setIsLoggedIn(false)
-    window.location.href = '/'
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    router.push('/')
   }
 
   return (
-    <nav className="border-b border-gray-200 bg-white">
+    <nav className="border-b border-gray-200 bg-white shadow-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <Briefcase className="h-8 w-8 text-primary-600" />
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2">
             <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
               AI Mülakat Simülatörü
             </span>
           </Link>
 
-          <div className="flex items-center space-x-4">
-            {isLoggedIn ? (
-              <>
-                <Link
-                  href="/dashboard"
-                  className={`text-sm font-medium transition-colors hover:text-primary-600 ${
-                    pathname === '/dashboard' ? 'text-primary-600' : 'text-gray-700'
-                  }`}
-                >
-                  Panel
-                </Link>
-                <Link
-                  href="/interview/new"
-                  className={`text-sm font-medium transition-colors hover:text-primary-600 ${
-                    pathname === '/interview/new' ? 'text-primary-600' : 'text-gray-700'
-                  }`}
-                >
-                  Yeni Mülakat
-                </Link>
-                <Button variant="ghost" size="sm" onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Çıkış
-                </Button>
-              </>
-            ) : (
-              <>
-                <Link href="/login">
-                  <Button variant="ghost" size="sm">
-                    Giriş
-                  </Button>
-                </Link>
-                <Link href="/register">
-                  <Button size="sm">Başlayın</Button>
-                </Link>
-              </>
+          {/* Navigation Links */}
+          <div className="flex items-center gap-6">
+            <Link
+              href="/"
+              className={`text-sm font-medium transition-colors hover:text-primary-600 ${
+                pathname === '/' ? 'text-primary-600' :  'text-gray-700'
+              }`}
+            >
+              Ana Sayfa
+            </Link>
+
+            {user && (
+              <Link
+                href="/dashboard"
+                className={`text-sm font-medium transition-colors hover:text-primary-600 ${
+                  pathname === '/dashboard' ? 'text-primary-600' : 'text-gray-700'
+                }`}
+              >
+                Panel
+              </Link>
             )}
+
+            {/* Auth Buttons */}
+            <div className="flex items-center gap-3">
+              {user ? (
+                <>
+                  <span className="text-sm text-gray-600">
+                    {user.email?. split('@')[0]}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Çıkış
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <Button variant="outline" size="sm">
+                      Giriş Yap
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button size="sm">Kayıt Ol</Button>
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
