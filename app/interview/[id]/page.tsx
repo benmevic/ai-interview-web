@@ -70,80 +70,67 @@ export default function InterviewPage() {
   }, [router, interviewId])
 
   const handleSubmitAnswer = async (answer: string) => {
-    try {
-      const response = await fetch('/api/openai/evaluate-answer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          questionId: questions[currentQuestionIndex].id,
-          answer,
-          question:  questions[currentQuestionIndex].question_text,
-        }),
-      })
+  try {
+    const response = await fetch('/api/openai/evaluate-answer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        questionId: questions[currentQuestionIndex]. id,
+        answer,
+        question: questions[currentQuestionIndex]. question_text,
+        interviewId:  interviewId, // ← EKLE
+      }),
+    })
 
-      const data = await response. json()
+    const data = await response. json()
 
-      if (!response. ok) {
-        throw new Error(data.error || 'Failed to evaluate answer')
-      }
-
-      // Update question with evaluation
-      const updatedQuestions = [... questions]
-      updatedQuestions[currentQuestionIndex] = {
-        ...updatedQuestions[currentQuestionIndex],
-        answer_text: answer,
-        score: data.data.score,
-        feedback: data.data.feedback,
-      }
-      setQuestions(updatedQuestions)
-
-      // ✅ SON SORU MU KONTROL ET
-      const isLastQuestion = currentQuestionIndex === questions.length - 1
-      const allAnswered = updatedQuestions.every((q) => q.answer_text)
-
-      if (isLastQuestion && allAnswered) {
-        console.log('🏁 All questions answered, completing interview...')
-
-        // Mülakat tamamlama API'sini çağır
-        try {
-          const sessionData = await supabase.auth. getSession()
-          const completeResponse = await fetch(`/api/interview/${interviewId}/complete`, {
-            method: 'POST',
-            headers:  {
-              Authorization: `Bearer ${sessionData.data. session?. access_token}`,
-            },
-          })
-
-          const completeData = await completeResponse.json()
-
-          if (completeResponse.ok) {
-            console.log('✅ Interview completed:', completeData.data.score)
-            // Interview state'ini güncelle
-            if (interview) {
-              setInterview({
-                ...interview,
-                status: 'completed',
-                score: completeData.data.score,
-              })
-            }
-          } else {
-            console.error('❌ Complete interview failed:', completeData.error)
-          }
-        } catch (completeError) {
-          console. error('⚠️ Complete interview error:', completeError)
-        }
-      } else {
-        // Sonraki soruya geç
-        setTimeout(() => {
-          if (currentQuestionIndex < questions.length - 1) {
-            setCurrentQuestionIndex(currentQuestionIndex + 1)
-          }
-        }, 2000)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit answer')
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to evaluate answer')
     }
+
+    // Update question with evaluation
+    const updatedQuestions = [...questions]
+    updatedQuestions[currentQuestionIndex] = {
+      ...updatedQuestions[currentQuestionIndex],
+      answer_text: answer,
+      score: data.data.score,
+      feedback: data.data.feedback,
+    }
+    setQuestions(updatedQuestions)
+
+    // ✅ SON SORU MU KONTROL ET
+    const isLastQuestion = currentQuestionIndex === questions.length - 1
+    const allAnswered = updatedQuestions.every((q) => q.answer_text)
+
+    if (isLastQuestion && allAnswered) {
+      console.log('🏁 All questions answered!')
+      
+      // Interview state'ini güncelle
+      if (interview) {
+        const totalScore = Math.round(
+          (updatedQuestions.reduce((sum, q) => sum + (q.score || 0), 0) /
+            updatedQuestions.length) *
+            10
+        )
+        
+        setInterview({
+          ...interview,
+          status: 'completed',
+          score: totalScore,
+        })
+      }
+    } else {
+      // Sonraki soruya geç
+      setTimeout(() => {
+        if (currentQuestionIndex < questions. length - 1) {
+          setCurrentQuestionIndex(currentQuestionIndex + 1)
+        }
+      }, 2000)
+    }
+  } catch (err) {
+    setError(err instanceof Error ? err.message :  'Failed to submit answer')
   }
+}
 
   const isInterviewComplete =
     questions.length > 0 && questions. every((q) => q.answer_text && q.score !== undefined)
