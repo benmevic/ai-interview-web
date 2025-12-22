@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
         position,
         cv_text: cvText,
         status: 'in_progress',
-      }) as any)
+      } as any)
       .select()
       .single()
 
