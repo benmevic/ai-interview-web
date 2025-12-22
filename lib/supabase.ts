@@ -1,29 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL! 
-const supabaseAnonKey = process.env. NEXT_PUBLIC_SUPABASE_ANON_KEY! 
+/**
+ * Server-side Supabase client with service role key
+ * BYPASSES Row Level Security (RLS)
+ * ⚠️ Only use in API routes, NEVER in client-side code
+ */
+export const getServerSupabase = () => {
+  const supabaseUrl = process.env. NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-// Client-side için singleton
-let supabaseInstance: ReturnType<typeof createClient> | null = null
-
-export const getSupabase = () => {
-  if (!supabaseInstance) {
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Missing Supabase environment variables')
-    }
-
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      },
-    })
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase server environment variables')
   }
 
-  return supabaseInstance
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
 }
-
-// Export singleton
-export const supabase = getSupabase()
