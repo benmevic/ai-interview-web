@@ -15,7 +15,7 @@ export const getOpenAI = () => {
     }
 
     openaiInstance = new OpenAI({
-      apiKey: apiKey,
+      apiKey:  apiKey,
     })
   }
 
