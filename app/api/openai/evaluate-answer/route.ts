@@ -4,9 +4,8 @@ import { ApiResponse, Evaluation } from '@/lib/types'
 
 /**
  * Evaluate answer with OpenAI API endpoint
- * Analyzes user's answer and provides score and feedback
  */
-export async function POST(request: NextRequest) {
+export async function POST(request:  NextRequest) {
   try {
     console.log('🧠 Evaluating answer...')
 
@@ -25,17 +24,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ✅ GEÇICI:  Mock evaluation (OpenAI key yoksa)
-    if (!process.env.OPENAI_API_KEY) {
+    // ✅ MOCK EVALUATION (OpenAI key yoksa veya hata olursa)
+    const useMock = !process.env.OPENAI_API_KEY
+
+    if (useMock) {
       console.log('⚠️ Using mock evaluation (no OpenAI key)')
 
+      const answerLength = answer.split(' ').length
+      let score = 7
+
+      if (answerLength > 50) score = 9
+      else if (answerLength > 30) score = 8
+      else if (answerLength < 10) score = 5
+
       const mockEvaluation = {
-        score: Math.floor(Math.random() * 3) + 7, // 7-9 arası random
+        score,
         feedback: 
           'Cevabınız genel olarak iyiydi.  Daha spesifik örnekler vererek cevabınızı güçlendirebilirsiniz.',
         strengths: [
           'Konuya hakim olduğunuz anlaşılıyor',
-          'Net ve anlaşılır ifade ettiniz',
+          'Net ve anlaşılır ifade kullandınız',
         ],
         improvements: [
           'Daha fazla teknik detay ekleyebilirsiniz',
@@ -55,21 +63,21 @@ export async function POST(request: NextRequest) {
     // ✅ GERÇEK OpenAI çağrısı
     console.log('📡 Calling OpenAI for evaluation...')
 
-    const completion = await openai. chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      messages: [
+      messages:  [
         {
-          role: 'system',
-          content:
-            'You are an expert interviewer evaluating candidate responses. Provide constructive feedback with a score out of 10.',
+          role:  'system',
+          content: 
+            'You are an expert interviewer evaluating candidate responses.  Provide constructive feedback with a score out of 10.',
         },
         {
-          role:  'user',
-          content:  `Evaluate this interview answer:
+          role: 'user',
+          content: `Evaluate this interview answer: 
 
 Question: ${question}
 
-Answer:  ${answer}
+Answer: ${answer}
 
 Provide: 
 1. Score (0-10)
@@ -86,12 +94,12 @@ Respond in JSON format with keys: score, feedback, strengths, improvements`,
 
     console.log('✅ OpenAI evaluation received')
 
-    const content = completion. choices[0].message.content || '{}'
+    const content = completion.choices[0].message.content || '{}'
     console.log('📝 Evaluation content:', content)
 
     const evaluation: Evaluation = JSON.parse(content)
 
-    return NextResponse.json({
+    return NextResponse. json({
       success: true,
       data: {
         questionId,
@@ -105,12 +113,28 @@ Respond in JSON format with keys: score, feedback, strengths, improvements`,
     console.error('💥 Answer evaluation error:', error)
     console.error('Error details:', error instanceof Error ? error.message : 'Unknown')
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to evaluate answer',
-      } as ApiResponse,
-      { status: 500 }
-    )
+    // Hata olursa mock dön
+    console. log('⚠️ Falling back to mock evaluation due to error')
+
+    const { questionId, answer } = await request.json()
+
+    const answerLength = answer.split(' ').length
+    let score = 7
+
+    if (answerLength > 50) score = 9
+    else if (answerLength > 30) score = 8
+    else if (answerLength < 10) score = 5
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        questionId,
+        score,
+        feedback: 
+          'Cevabınız değerlendirildi. Daha detaylı ve spesifik cevaplar vererek puanınızı artırabilirsiniz.',
+        strengths: ['Soruyu anladınız', 'Net cevap verdiniz'],
+        improvements: ['Daha fazla örnek verebilirsiniz', 'Teknik detayları ekleyebilirsiniz'],
+      },
+    } as ApiResponse)
   }
 }
