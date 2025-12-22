@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ApiResponse, Interview, Question } from '@/lib/types'
+import { ApiResponse } from '@/lib/types'
+import { supabase } from '@/lib/supabase'
 import pdf from 'pdf-parse'
 
 /**
@@ -10,6 +11,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🚀 Create interview started')
 
+    // Token kontrolü
     const authHeader = request.headers.get('authorization')
     const token = authHeader?.replace('Bearer ', '')
     
@@ -22,7 +24,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data:  { user }, error:  authError } = await supabase.auth.getUser(token)
+    // User doğrulama
+    const { data: { user }, error:  authError } = await supabase. auth.getUser(token)
     
     console.log('👤 User:', user?.email, 'Error:', authError?. message)
 
@@ -33,21 +36,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Form data al
     const formData = await request.formData()
     const file = formData.get('cv') as File
     const title = formData.get('title') as string
-    const position = formData.get('position') as string
+    const position = formData. get('position') as string
 
     console.log('📋 Form data:', { title, position, hasFile: !!file })
 
-    if (!file || !title || !position) {
+    if (!file || !title || ! position) {
       return NextResponse.json(
         { success: false, error: 'Eksik alanlar' } as ApiResponse,
         { status: 400 }
       )
     }
 
-    // PDF parse kısmı
+    // PDF parse
     console.log('📄 Parsing PDF...')
     const buffer = Buffer.from(await file.arrayBuffer())
     const pdfData = await pdf(buffer)
@@ -55,94 +59,81 @@ export async function POST(request: NextRequest) {
     
     console.log('✅ PDF parsed, text length:', cvText.length)
 
-    // ...  geri kalan kod
-
-  } catch (error) {
-    console.error('💥 Create interview error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to create interview' } as ApiResponse,
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const formData = await request.formData()
-    const file = formData.get('cv') as File
-    const title = formData.get('title') as string
-    const position = formData.get('position') as string
-
-    if (!file || !title || !position) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' } as ApiResponse,
-        { status: 400 }
-      )
-    }
-
-    // Extract text from PDF
-    const buffer = Buffer.from(await file.arrayBuffer())
-    const pdfData = await pdf(buffer)
-    const cvText = pdfData.text
-
-    // Generate interview ID (in a real app, this would be from the database)
-    const interviewId = Math.random().toString(36).substring(7)
-
-    // Analyze CV and generate questions (will be done via OpenAI API)
-    const analysisResponse = await fetch(
-      `${request.nextUrl.origin}/api/openai/analyze-cv`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cvText, position }),
-      }
-    )
-
-    if (!analysisResponse.ok) {
-      throw new Error('Failed to analyze CV')
-    }
-
+    // OpenAI ile soru üret
+    console.log('🤖 Generating questions...')
     const questionsResponse = await fetch(
       `${request.nextUrl.origin}/api/openai/generate-questions`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cvText, position }),
+        body: JSON. stringify({ cvText, position }),
       }
     )
 
     if (!questionsResponse.ok) {
-      throw new Error('Failed to generate questions')
+      console.error('❌ Failed to generate questions')
+      throw new Error('Soru üretimi başarısız')
     }
 
     const { data: questionsData } = await questionsResponse.json()
+    console.log('✅ Questions generated:', questionsData.questions.length)
 
-    // Create interview object (in a real app, save to database)
-    const interview: Interview = {
-      id: interviewId,
-      user_id: 'user-123', // Would come from auth session
-      title,
-      position,
-      cv_text: cvText,
-      status: 'in_progress',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+    // Interview'ı Supabase'e kaydet
+    console.log('💾 Saving interview to database...')
+    const { data: interview, error: interviewError } = await supabase
+      .from('interviews')
+      .insert({
+        user_id: user.id,
+        title,
+        position,
+        cv_text: cvText,
+        status: 'in_progress',
+      })
+      .select()
+      .single()
+
+    if (interviewError) {
+      console.error('❌ Interview save error:', interviewError)
+      throw new Error('Interview kaydedilemedi:  ' + interviewError.message)
     }
 
-    // Store in localStorage or database
-    // For demo purposes, we'll return the data
+    console.log('✅ Interview saved, ID:', interview.id)
+
+    // Soruları Supabase'e kaydet
+    console.log('💾 Saving questions to database.. .')
+    const questionsToInsert = questionsData.questions.map((q:  any, index: number) => ({
+      interview_id: interview.id,
+      question_text: q.text || q.question_text || q,
+      order_num: index + 1,
+    }))
+
+    const { error: questionsError } = await supabase
+      .from('questions')
+      .insert(questionsToInsert)
+
+    if (questionsError) {
+      console.error('❌ Questions save error:', questionsError)
+      // Rollback:  Interview'ı sil
+      await supabase.from('interviews').delete().eq('id', interview.id)
+      throw new Error('Sorular kaydedilemedi: ' + questionsError.message)
+    }
+
+    console.log('✅ Questions saved!')
+
     return NextResponse.json({
       success: true,
       data: {
-        id: interviewId,
+        id: interview.id,
         interview,
-        questions: questionsData.questions,
       },
     } as ApiResponse)
   } catch (error) {
-    console.error('Create interview error:', error)
+    console.error('💥 Create interview error:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to create interview' } as ApiResponse,
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Mülakat oluşturulamadı',
+      } as ApiResponse,
       { status: 500 }
     )
   }
