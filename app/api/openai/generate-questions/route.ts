@@ -4,6 +4,20 @@ import pdf from 'pdf-parse'
 
 export async function POST(request: NextRequest) {
   try {
+    // 🔍 DEBUG: Key var mı kontrol et
+    const hasKey = !!process.env.OPENAI_API_KEY
+    const keyPrefix = process.env.OPENAI_API_KEY?. substring(0, 7)
+    
+    console.log('🔑 OpenAI Key Status:', {
+      exists: hasKey,
+      prefix:  keyPrefix,
+      length: process.env.OPENAI_API_KEY?.length
+    })
+
+    const { cvText, position } = await request.json()
+
+export async function POST(request: NextRequest) {
+  try {
     console.log('🚀 Creating interview')
 
     // ---------------- AUTH ----------------
