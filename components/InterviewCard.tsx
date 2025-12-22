@@ -76,7 +76,11 @@ export default function InterviewCard({ interview, onContinue, onDelete }: Inter
         </div>
 
         <div className="mt-6 flex space-x-2">
-          <Button onClick={onContinue} className="flex-1" variant={isCompleted ? 'outline' : 'default'}>
+          <Button
+  onClick={onContinue}
+  className="flex-1"
+  variant={isCompleted ? 'outline' : 'primary'}
+>
             {isCompleted ? 'Sonuçları Gör' : 'Devam Et'}
           </Button>
           <Button
