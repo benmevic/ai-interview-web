@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import QuestionCard from '@/components/QuestionCard'
 import { Question, Interview } from '@/lib/types'
 import { CheckCircle, Award } from 'lucide-react'
+import { supabase } from '@/lib/supabase'  // ← EKLE
 
 /**
  * Active interview page with questions and answers
@@ -23,27 +24,40 @@ export default function InterviewPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    // Check authentication
-    const session = localStorage.getItem('user_session')
-    if (!session) {
-      router.push('/login')
-      return
-    }
-
-    // Fetch interview data
     const loadInterview = async () => {
       try {
-        const response = await fetch(`/api/interview/${interviewId}`)
+        // ✅ Supabase session kontrolü
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+        if (sessionError || !session) {
+          console.error('❌ No session, redirecting to login')
+          router.push('/login')
+          return
+        }
+
+        console.log('✅ Session OK, fetching interview:', interviewId)
+
+        // ✅ Interview ve questions çek
+        const response = await fetch(`/api/interview/${interviewId}`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        })
+
         const data = await response.json()
 
         if (!response.ok) {
-          throw new Error(data.error || 'Failed to fetch interview')
+          console.error('❌ Interview fetch error:', data.error)
+          throw new Error(data.error || 'Mülakat yüklenemedi')
         }
 
-        setInterview(data.data.interview)
-        setQuestions(data.data.questions)
+        console.log('✅ Interview loaded:', data.data)
+
+        setInterview(data. data.interview)
+        setQuestions(data.data.questions || [])
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred')
+        console.error('💥 Load interview error:', err)
+        setError(err instanceof Error ? err.message : 'Bir hata oluştu')
       } finally {
         setIsLoading(false)
       }
@@ -51,6 +65,9 @@ export default function InterviewPage() {
 
     loadInterview()
   }, [router, interviewId])
+
+  // ...  geri kalan kod aynı kalacak
+
 
   const handleSubmitAnswer = async (answer: string) => {
     try {
