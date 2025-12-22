@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -18,11 +18,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [userEmail, setUserEmail] = useState('')
 
-  useEffect(() => {
-    loadInterviews()
-  }, [])
-
-  const loadInterviews = async () => {
+  const loadInterviews = useCallback(async () => {
     try {
       setIsLoading(true)
       console.log('🔍 Loading interviews...')
@@ -61,7 +57,11 @@ export default function DashboardPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [router])
+
+  useEffect(() => {
+    loadInterviews()
+  }, [loadInterviews])
 
   const handleLogout = async () => {
     try {
@@ -85,7 +85,7 @@ export default function DashboardPage() {
       }
 
       console.log('✅ Interview deleted')
-      
+
       // Liste yenile
       await loadInterviews()
     } catch (error) {
@@ -96,13 +96,13 @@ export default function DashboardPage() {
 
   const handleContinueInterview = async (id: string) => {
     console.log('▶️ Continuing interview:', id)
-    
+
     // Önce listeyi yenile (son durumu al)
     await loadInterviews()
-    
+
     // Interview bul
     const interview = interviews.find((i) => i.id === id)
-    
+
     if (interview?. status === 'completed') {
       console.log('✅ Interview already completed, viewing results')
       router.push(`/interview/${id}`)
@@ -189,7 +189,7 @@ export default function DashboardPage() {
                   ? Math.round(
                       interviews
                         .filter((i) => i.score)
-                        . reduce((sum, i) => sum + (i.score || 0), 0) /
+                        .reduce((sum, i) => sum + (i.score || 0), 0) /
                         interviews.filter((i) => i.score).length
                     )
                   : 0}
