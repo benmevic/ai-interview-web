@@ -13,28 +13,27 @@ export interface User {
 export interface Interview {
   id: string
   user_id: string
-  title: string
+  title:  string
   position: string
-  cv_text?: string
+  cv_text?:  string
   status: 'pending' | 'in_progress' | 'completed'
-  score?: number
+  score?:  number
   created_at: string
-  updated_at: string
+  updated_at?:  string
 }
 
 /**
  * Question type definition
  */
-
 export interface Question {
   id: string
   interview_id: string
-  question_text:  string
-  order_num: number  // ← 'order' yerine 'order_num'
-  answer_text?: string
+  question_text: string
+  order_num: number  // ✅ DÜZELTME
+  answer_text?:  string
   score?: number
-  feedback?:  string
-  created_at: string
+  feedback?: string
+  created_at:  string
 }
 
 /**
