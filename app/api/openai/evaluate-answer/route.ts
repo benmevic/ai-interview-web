@@ -4,10 +4,16 @@ import { getServerSupabase } from '@/lib/supabase-server'
 import { ApiResponse, Evaluation } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
+  // ✅ DEBUG: KEY VAR MI? 
+  console.log('🔑 OPENAI_API_KEY exists:', !!process.env. OPENAI_API_KEY)
+  console.log('🔑 OPENAI_API_KEY length:', process.env.OPENAI_API_KEY?.length)
+  console.log('🔑 OPENAI_API_KEY prefix:', process.env.OPENAI_API_KEY?.substring(0, 20))
+  
   let questionId = ''
   let question = ''
   let answer = ''
   let interviewId = ''
+  // ... devamı
 
   try {
     const body = await request.json()
